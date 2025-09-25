@@ -976,7 +976,8 @@ namespace CybageMISAutomation
                             Date = entry["date"]?.ToString() ?? "",
                             MachineName = entry["machineName"]?.ToString() ?? "",
                             Direction = entry["direction"]?.ToString() ?? "",
-                            Time = entry["time"]?.ToString() ?? ""
+                            Time = entry["time"]?.ToString() ?? "",
+                            Activity = "" // Will be set later by ComparisonWindow labeling
                         });
                     }
 
@@ -1216,7 +1217,8 @@ namespace CybageMISAutomation
                         Date = entry["date"]?.ToString() ?? "",
                         MachineName = entry["machineName"]?.ToString() ?? "",
                         Direction = entry["direction"]?.ToString() ?? "",
-                        Time = entry["time"]?.ToString() ?? ""
+                        Time = entry["time"]?.ToString() ?? "",
+                        Activity = "" // Will be set later by ComparisonWindow labeling  
                     });
                 }
             }

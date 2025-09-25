@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
@@ -45,11 +47,11 @@ namespace CybageMISAutomation
                 if (saveDialog.ShowDialog() == true)
                 {
                     var csv = new StringBuilder();
-                    csv.AppendLine("Employee ID,Date,Machine Name,Direction,Time");
+                    csv.AppendLine("Employee ID,Date,Machine Name,Direction,Time,Activity,Duration");
                     
                     foreach (var entry in SwipeLogEntries)
                     {
-                        csv.AppendLine($"\"{entry.EmployeeId}\",\"{entry.Date}\",\"{entry.MachineName}\",\"{entry.Direction}\",\"{entry.Time}\"");
+                        csv.AppendLine($"\"{entry.EmployeeId}\",\"{entry.Date}\",\"{entry.MachineName}\",\"{entry.Direction}\",\"{entry.Time}\",\"{entry.Activity}\",\"{entry.Duration}\"");
                     }
                     
                     File.WriteAllText(saveDialog.FileName, csv.ToString());
@@ -69,11 +71,11 @@ namespace CybageMISAutomation
             try
             {
                 var text = new StringBuilder();
-                text.AppendLine("Employee ID\tDate\tMachine Name\tDirection\tTime");
+                text.AppendLine("Employee ID\tDate\tMachine Name\tDirection\tTime\tActivity\tDuration");
                 
                 foreach (var entry in SwipeLogEntries)
                 {
-                    text.AppendLine($"{entry.EmployeeId}\t{entry.Date}\t{entry.MachineName}\t{entry.Direction}\t{entry.Time}");
+                    text.AppendLine($"{entry.EmployeeId}\t{entry.Date}\t{entry.MachineName}\t{entry.Direction}\t{entry.Time}\t{entry.Activity}\t{entry.Duration}");
                 }
                 
                 Clipboard.SetText(text.ToString());

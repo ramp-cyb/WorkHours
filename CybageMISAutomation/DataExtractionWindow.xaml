@@ -34,11 +34,12 @@
                   AlternatingRowBackground="LightGray"
                   Margin="10">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Employee ID" Binding="{Binding EmployeeId}" Width="100"/>
-                <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="120"/>
-                <DataGridTextColumn Header="Machine Name" Binding="{Binding MachineName}" Width="200"/>
-                <DataGridTextColumn Header="Direction" Binding="{Binding Direction}" Width="100"/>
-                <DataGridTextColumn Header="Time" Binding="{Binding Time}" Width="120"/>
+                <DataGridTextColumn Header="Employee ID" Binding="{Binding EmployeeId}" Width="80"/>
+                <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="100"/>
+                <DataGridTextColumn Header="Machine Name" Binding="{Binding MachineName}" Width="180"/>
+                <DataGridTextColumn Header="Direction" Binding="{Binding Direction}" Width="80"/>
+                <DataGridTextColumn Header="Time" Binding="{Binding Time}" Width="100"/>
+                <DataGridTextColumn Header="Activity" Binding="{Binding Activity}" Width="80"/>
             </DataGrid.Columns>
         </DataGrid>
         

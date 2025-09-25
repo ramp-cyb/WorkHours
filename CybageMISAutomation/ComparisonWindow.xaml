@@ -51,11 +51,12 @@
                           AlternatingRowBackground="#FFF0F0F0"
                           Margin="5">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Employee ID" Binding="{Binding EmployeeId}" Width="80"/>
-                        <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="85"/>
-                        <DataGridTextColumn Header="Machine Name" Binding="{Binding MachineName}" Width="150"/>
-                        <DataGridTextColumn Header="Direction" Binding="{Binding Direction}" Width="80"/>
-                        <DataGridTextColumn Header="Time" Binding="{Binding Time}" Width="100"/>
+                        <DataGridTextColumn Header="Employee ID" Binding="{Binding EmployeeId}" Width="70"/>
+                        <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="75"/>
+                        <DataGridTextColumn Header="Machine Name" Binding="{Binding MachineName}" Width="130"/>
+                        <DataGridTextColumn Header="Direction" Binding="{Binding Direction}" Width="60"/>
+                        <DataGridTextColumn Header="Time" Binding="{Binding Time}" Width="80"/>
+                        <DataGridTextColumn Header="Activity" Binding="{Binding Activity}" Width="60"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </GroupBox>
@@ -75,11 +76,12 @@
                           AlternatingRowBackground="#F0F8FF"
                           Margin="5">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Employee ID" Binding="{Binding EmployeeId}" Width="80"/>
-                        <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="85"/>
-                        <DataGridTextColumn Header="Machine Name" Binding="{Binding MachineName}" Width="150"/>
-                        <DataGridTextColumn Header="Direction" Binding="{Binding Direction}" Width="80"/>
-                        <DataGridTextColumn Header="Time" Binding="{Binding Time}" Width="100"/>
+                        <DataGridTextColumn Header="Employee ID" Binding="{Binding EmployeeId}" Width="70"/>
+                        <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="75"/>
+                        <DataGridTextColumn Header="Machine Name" Binding="{Binding MachineName}" Width="130"/>
+                        <DataGridTextColumn Header="Direction" Binding="{Binding Direction}" Width="60"/>
+                        <DataGridTextColumn Header="Time" Binding="{Binding Time}" Width="80"/>
+                        <DataGridTextColumn Header="Activity" Binding="{Binding Activity}" Width="60"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </GroupBox>
