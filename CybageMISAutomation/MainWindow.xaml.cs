@@ -62,6 +62,7 @@ namespace CybageMISAutomation
 
                 btnStartAutomation.IsEnabled = true;
                 btnStartFullAutomation.IsEnabled = true;
+                btnMonthlyReport.IsEnabled = true;
             }
             catch (Exception ex)
             {
@@ -1376,6 +1377,7 @@ namespace CybageMISAutomation
             btnGenerateReport.IsEnabled = enabled;
             btnExtractData.IsEnabled = enabled;
             btnReset.IsEnabled = enabled;
+            btnMonthlyReport.IsEnabled = enabled;
         }
 
         private async Task WaitForPageLoad()
@@ -1763,5 +1765,312 @@ namespace CybageMISAutomation
             pnlManualControls.Visibility = Visibility.Collapsed;
             LogMessage("Manual Mode disabled - hiding manual controls");
         }
+
+        #region Monthly Report Functions
+
+        private async void BtnMonthlyReport_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                SetButtonsEnabled(false);
+                LogMessage("📅 Starting Monthly Report extraction...");
+                UpdateStatus("Extracting monthly data...", 0);
+
+                var monthlyData = await ExtractMonthlyAttendanceData();
+                
+                if (monthlyData.Count > 0)
+                {
+                    var monthlyWindow = new MonthlyWindow(txtEmployeeId.Text);
+                    monthlyWindow.LoadMonthlyData(monthlyData, txtEmployeeId.Text);
+                    monthlyWindow.Show();
+                    
+                    LogMessage($"✅ Monthly report extracted successfully - {monthlyData.Count} records");
+                    UpdateStatus($"Monthly report completed - {monthlyData.Count} records", 100);
+                }
+                else
+                {
+                    LogMessage("⚠ No monthly data found");
+                    MessageBox.Show("No monthly data found for the specified employee.", "No Data", 
+                                   MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"❌ Monthly report extraction failed: {ex.Message}");
+                UpdateStatus("Monthly report failed", 0);
+                MessageBox.Show($"Monthly report extraction failed: {ex.Message}", "Error",
+                               MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                SetButtonsEnabled(true);
+            }
+        }
+
+        private async Task<List<MonthlyAttendanceEntry>> ExtractMonthlyAttendanceData()
+        {
+            var monthlyData = new List<MonthlyAttendanceEntry>();
+
+            try
+            {
+                // Step 1: Navigate to main page
+                LogMessage("1️⃣ Navigating to main page...");
+                webView.CoreWebView2.Navigate(MIS_URL);
+                await WaitForPageLoad();
+
+                // Step 2: Expand Leave Management tree (same as Today/Yesterday)
+                LogMessage("2️⃣ Expanding Leave Management tree...");
+                await ExecuteExpandTree();
+                await Task.Delay(500); // Brief pause
+
+                // Step 3: Navigate to Attendance Log Report
+                LogMessage("3️⃣ Navigating to Attendance Log Report...");
+                await NavigateToAttendanceLogReport();
+
+                // Step 4: Select employee
+                LogMessage("4️⃣ Selecting employee...");
+                await SelectEmployeeInAttendanceReport();
+
+                // Step 5: Set date range (1st of current month to today)
+                LogMessage("5️⃣ Setting date range for current month...");
+                await SetMonthlyDateRange();
+
+                // Step 6: Generate report
+                LogMessage("6️⃣ Generating monthly report...");
+                await GenerateAttendanceReport();
+
+                // Step 7: Extract data from report
+                LogMessage("7️⃣ Extracting data from monthly report...");
+                monthlyData = await ParseMonthlyReportData();
+
+                LogMessage($"✅ Successfully extracted {monthlyData.Count} monthly records");
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"❌ Error in monthly data extraction: {ex.Message}");
+                throw;
+            }
+
+            return monthlyData;
+        }
+
+        private async Task NavigateToAttendanceLogReport()
+        {
+            // Wait a bit more after tree expansion
+            await Task.Delay(1000);
+            
+            UpdateStatus("Clicking 'Attendance Log Report' link...", 30);
+            LogMessage("Starting Attendance Log Report click process...");
+            
+            // Click on the Attendance Log Report link using the specific ID from HTML
+            string attendanceLogScript = @"
+                (function() {
+                    // First try the specific ID from the HTML provided by user
+                    var attendanceLogLink = document.getElementById('TempleteTreeViewt22');
+                    
+                    if (attendanceLogLink) {
+                        return {
+                            found: true,
+                            text: attendanceLogLink.textContent || attendanceLogLink.innerText,
+                            href: attendanceLogLink.getAttribute('href') || '',
+                            onclick: attendanceLogLink.getAttribute('onclick') || '',
+                            visible: window.getComputedStyle(attendanceLogLink).display !== 'none'
+                        };
+                    } else {
+                        // Fallback - try to find by title attribute
+                        var titleLink = document.querySelector('a[title=""Attendance Log Report""]');
+                        if (titleLink) {
+                            return {
+                                found: true,
+                                foundBy: 'title',
+                                text: titleLink.textContent || titleLink.innerText,
+                                id: titleLink.id || 'no-id'
+                            };
+                        } else {
+                            // Debug - show available links
+                            var links = document.querySelectorAll('a[id*=""TempleteTreeView""], a[title*=""Report""]');
+                            var available = [];
+                            for (var i = 0; i < Math.min(links.length, 10); i++) {
+                                available.push({
+                                    id: links[i].id || 'no-id',
+                                    title: links[i].title || 'no-title', 
+                                    text: (links[i].textContent || '').substring(0, 50)
+                                });
+                            }
+                            return {
+                                found: false,
+                                available: available
+                            };
+                        }
+                    }
+                })();";
+
+            string result = await webView.CoreWebView2.ExecuteScriptAsync(attendanceLogScript);
+            LogMessage($"Attendance Log link verification: {result}");
+            
+            // Now click the link
+            string clickScript = @"
+                var attendanceLogLink = document.getElementById('TempleteTreeViewt22') || 
+                                      document.querySelector('a[title=""Attendance Log Report""]');
+                
+                if (attendanceLogLink) {
+                    attendanceLogLink.click();
+                    return 'Attendance Log Report clicked successfully';
+                } else {
+                    return 'Attendance Log Report link not found for clicking';
+                }";
+
+            string clickResult = await webView.CoreWebView2.ExecuteScriptAsync(clickScript);
+            LogMessage($"Attendance Log click result: {clickResult}");
+            await WaitForPageLoad();
+        }
+
+        private async Task SelectEmployeeInAttendanceReport()
+        {
+            // Select employee by employee ID (find employee where ID matches as substring)
+            string selectEmployeeScript = $@"
+                var employeeDropdown = document.querySelector('select[name*=""Employee""], select[id*=""Employee""], select[id*=""employee""]');
+                if (employeeDropdown) {{
+                    var targetId = '{txtEmployeeId.Text}';
+                    var found = false;
+                    
+                    for (var i = 0; i < employeeDropdown.options.length; i++) {{
+                        var option = employeeDropdown.options[i];
+                        if (option.text.includes(targetId) || option.value.includes(targetId)) {{
+                            employeeDropdown.selectedIndex = i;
+                            found = true;
+                            break;
+                        }}
+                    }}
+                    
+                    if (found) {{
+                        employeeDropdown.dispatchEvent(new Event('change'));
+                        return 'Employee selected: ' + employeeDropdown.options[employeeDropdown.selectedIndex].text;
+                    }} else {{
+                        return 'Employee not found with ID: ' + targetId;
+                    }}
+                }} else {{
+                    return 'Employee dropdown not found';
+                }}";
+
+            string result = await webView.CoreWebView2.ExecuteScriptAsync(selectEmployeeScript);
+            LogMessage($"Employee selection result: {result}");
+        }
+
+        private async Task SetMonthlyDateRange()
+        {
+            // Set date range to 1st of current month
+            var firstOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var dateString = firstOfMonth.ToString("dd-MMM-yyyy");
+
+            string setDateScript = $@"
+                var fromDateInput = document.querySelector('input[name*=""FromDate""], input[id*=""FromDate""]');
+                if (fromDateInput) {{
+                    fromDateInput.value = '{dateString}';
+                    fromDateInput.dispatchEvent(new Event('change'));
+                    return 'Date set to: {dateString}';
+                }} else {{
+                    return 'From date input not found';
+                }}";
+
+            string result = await webView.CoreWebView2.ExecuteScriptAsync(setDateScript);
+            LogMessage($"Date range result: {result}");
+        }
+
+        private async Task GenerateAttendanceReport()
+        {
+            // Click generate report button
+            string generateScript = @"
+                var generateBtn = document.querySelector('input[name*=""ViewReport""], input[title*=""Generate""], input[value*=""Generate""]');
+                if (generateBtn) {
+                    generateBtn.click();
+                    return 'Generate button clicked';
+                } else {
+                    return 'Generate button not found';
+                }";
+
+            string result = await webView.CoreWebView2.ExecuteScriptAsync(generateScript);
+            LogMessage($"Generate report result: {result}");
+            await WaitForPageLoad();
+        }
+
+        private async Task<List<MonthlyAttendanceEntry>> ParseMonthlyReportData()
+        {
+            var monthlyData = new List<MonthlyAttendanceEntry>();
+
+            string extractScript = @"
+                var reportTable = document.querySelector('#ReportViewer1 table, table[id*=""report""], .report table');
+                var data = [];
+                
+                if (reportTable) {
+                    var rows = reportTable.querySelectorAll('tr');
+                    var headerFound = false;
+                    
+                    for (var i = 0; i < rows.length; i++) {
+                        var cells = rows[i].querySelectorAll('td, th');
+                        if (cells.length > 10 && !headerFound) {
+                            // This might be header row, skip it
+                            headerFound = true;
+                            continue;
+                        }
+                        
+                        if (cells.length > 10 && headerFound) {
+                            // Data row - extract the columns we need
+                            var entry = {
+                                employeeId: cells[0] ? cells[0].textContent.trim() : '',
+                                employeeName: cells[1] ? cells[1].textContent.trim() : '',
+                                date: cells[2] ? cells[2].textContent.trim() : '',
+                                swipeCount: cells[3] ? cells[3].textContent.trim() : '0',
+                                inTime: cells[4] ? cells[4].textContent.trim() : '',
+                                outTime: cells[5] ? cells[5].textContent.trim() : '',
+                                totalHours: cells[6] ? cells[6].textContent.trim() : '',
+                                actualWorkHours: cells[10] ? cells[10].textContent.trim() : '', // Column 11: Actual Working Hours Swipe (A) + WFH (B)
+                                status: cells[11] ? cells[11].textContent.trim() : ''
+                            };
+                            
+                            // Only add if we have valid employee ID
+                            if (entry.employeeId && entry.employeeId !== '' && entry.date && entry.date !== '') {
+                                data.push(entry);
+                            }
+                        }
+                    }
+                }
+                
+                return JSON.stringify(data);";
+
+            string result = await webView.CoreWebView2.ExecuteScriptAsync(extractScript);
+            
+            try
+            {
+                var jsonData = result.Trim('"').Replace("\\\"", "\"");
+                var dataArray = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic[]>(jsonData);
+                
+                foreach (var item in dataArray)
+                {
+                    var entry = new MonthlyAttendanceEntry
+                    {
+                        EmployeeId = item.employeeId?.ToString() ?? "",
+                        EmployeeName = item.employeeName?.ToString() ?? "",
+                        Date = item.date?.ToString() ?? "",
+                        SwipeCount = int.TryParse(item.swipeCount?.ToString(), out int count) ? count : 0,
+                        InTime = item.inTime?.ToString() ?? "",
+                        OutTime = item.outTime?.ToString() ?? "",
+                        TotalHours = item.totalHours?.ToString() ?? "",
+                        ActualWorkHours = item.actualWorkHours?.ToString() ?? "",
+                        Status = item.status?.ToString() ?? ""
+                    };
+                    
+                    monthlyData.Add(entry);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error parsing monthly data: {ex.Message}");
+            }
+
+            return monthlyData;
+        }
+
+        #endregion
     }
 }

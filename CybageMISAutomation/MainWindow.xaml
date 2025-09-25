@@ -35,6 +35,11 @@
                     <Button x:Name="btnReset" Content="🔄 Reset" 
                             Width="80" Height="30" Margin="20,0,0,0"
                             Click="BtnReset_Click" IsEnabled="True"/>
+                    
+                    <Button x:Name="btnMonthlyReport" Content="📅 Monthly Report" 
+                            Width="130" Height="35" Margin="20,0,0,0"
+                            Click="BtnMonthlyReport_Click" IsEnabled="False"
+                            Background="#FF4682B4" Foreground="White" FontWeight="Bold"/>
                 </StackPanel>
                 
                 <!-- Second Row: Manual Controls (Hidden by default) -->

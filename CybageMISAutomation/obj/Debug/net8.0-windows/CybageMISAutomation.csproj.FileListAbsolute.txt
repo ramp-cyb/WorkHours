@@ -33,3 +33,5 @@ E:\Projects\CybageTechnologyGroup\WorkHours\CybageMISAutomation\obj\Debug\net8.0
 E:\Projects\CybageTechnologyGroup\WorkHours\CybageMISAutomation\obj\Debug\net8.0-windows\DataExtractionWindow.g.cs
 E:\Projects\CybageTechnologyGroup\WorkHours\CybageMISAutomation\obj\Debug\net8.0-windows\ComparisonWindow.baml
 E:\Projects\CybageTechnologyGroup\WorkHours\CybageMISAutomation\obj\Debug\net8.0-windows\ComparisonWindow.g.cs
+E:\Projects\CybageTechnologyGroup\WorkHours\CybageMISAutomation\obj\Debug\net8.0-windows\MonthlyWindow.baml
+E:\Projects\CybageTechnologyGroup\WorkHours\CybageMISAutomation\obj\Debug\net8.0-windows\MonthlyWindow.g.cs
