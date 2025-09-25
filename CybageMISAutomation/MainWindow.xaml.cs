@@ -1856,73 +1856,86 @@ namespace CybageMISAutomation
 
         private async Task NavigateToAttendanceLogReport()
         {
-            // Wait a bit more after tree expansion
-            await Task.Delay(1000);
-            
-            UpdateStatus("Clicking 'Attendance Log Report' link...", 30);
-            LogMessage("Starting Attendance Log Report click process...");
-            
-            // Click on the Attendance Log Report link using the specific ID from HTML
-            string attendanceLogScript = @"
-                (function() {
-                    // First try the specific ID from the HTML provided by user
-                    var attendanceLogLink = document.getElementById('TempleteTreeViewt22');
-                    
-                    if (attendanceLogLink) {
-                        return {
-                            found: true,
-                            text: attendanceLogLink.textContent || attendanceLogLink.innerText,
-                            href: attendanceLogLink.getAttribute('href') || '',
-                            onclick: attendanceLogLink.getAttribute('onclick') || '',
-                            visible: window.getComputedStyle(attendanceLogLink).display !== 'none'
-                        };
-                    } else {
-                        // Fallback - try to find by title attribute
-                        var titleLink = document.querySelector('a[title=""Attendance Log Report""]');
-                        if (titleLink) {
-                            return {
+            try
+            {
+                UpdateStatus("Clicking 'Attendance Log Report' link...", 30);
+                LogMessage("Starting Attendance Log Report click process...");
+
+                // First verify the Attendance Log Report link is available and get its details (same pattern as swipe log)
+                var linkVerificationResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
+                    (function() {
+                        var attendanceLogLink = document.getElementById('TempleteTreeViewt22');
+                        if (attendanceLogLink) {
+                            return JSON.stringify({
                                 found: true,
-                                foundBy: 'title',
-                                text: titleLink.textContent || titleLink.innerText,
-                                id: titleLink.id || 'no-id'
-                            };
-                        } else {
-                            // Debug - show available links
-                            var links = document.querySelectorAll('a[id*=""TempleteTreeView""], a[title*=""Report""]');
-                            var available = [];
-                            for (var i = 0; i < Math.min(links.length, 10); i++) {
-                                available.push({
-                                    id: links[i].id || 'no-id',
-                                    title: links[i].title || 'no-title', 
-                                    text: (links[i].textContent || '').substring(0, 50)
-                                });
-                            }
-                            return {
-                                found: false,
-                                available: available
-                            };
+                                text: attendanceLogLink.textContent || attendanceLogLink.innerText,
+                                href: attendanceLogLink.getAttribute('href') || '',
+                                onclick: attendanceLogLink.getAttribute('onclick') || '',
+                                visible: window.getComputedStyle(attendanceLogLink).display !== 'none'
+                            });
                         }
-                    }
-                })();";
+                        return JSON.stringify({found: false, error: 'Attendance Log Report link not found'});
+                    })()
+                ");
 
-            string result = await webView.CoreWebView2.ExecuteScriptAsync(attendanceLogScript);
-            LogMessage($"Attendance Log link verification: {result}");
-            
-            // Now click the link
-            string clickScript = @"
-                var attendanceLogLink = document.getElementById('TempleteTreeViewt22') || 
-                                      document.querySelector('a[title=""Attendance Log Report""]');
-                
-                if (attendanceLogLink) {
-                    attendanceLogLink.click();
-                    return 'Attendance Log Report clicked successfully';
-                } else {
-                    return 'Attendance Log Report link not found for clicking';
-                }";
+                var linkInfo = JsonConvert.DeserializeObject<dynamic>(
+                    linkVerificationResult.Trim('"').Replace("\\\"", "\""));
 
-            string clickResult = await webView.CoreWebView2.ExecuteScriptAsync(clickScript);
-            LogMessage($"Attendance Log click result: {clickResult}");
-            await WaitForPageLoad();
+                if (!(bool)linkInfo.found)
+                {
+                    LogMessage("ERROR: Attendance Log Report link not found or disappeared");
+                    throw new Exception("Attendance Log Report link not found or disappeared");
+                }
+
+                LogMessage($"✓ Attendance Log Report link verified: '{linkInfo.text}'");
+                LogMessage($"  OnClick: {linkInfo.onclick}");
+
+                // Click the Attendance Log Report link (same pattern as swipe log)
+                var clickResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
+                    (function() {
+                        try {
+                            var attendanceLogLink = document.getElementById('TempleteTreeViewt22');
+                            if (!attendanceLogLink) {
+                                return JSON.stringify({success: false, error: 'Link not found'});
+                            }
+
+                            // Simulate the click - this should trigger the __doPostBack
+                            attendanceLogLink.click();
+                            
+                            return JSON.stringify({
+                                success: true, 
+                                message: 'Attendance Log Report link clicked successfully'
+                            });
+                        } catch (ex) {
+                            return JSON.stringify({success: false, error: ex.message});
+                        }
+                    })()
+                ");
+
+                var clickResponse = JsonConvert.DeserializeObject<dynamic>(
+                    clickResult.Trim('"').Replace("\\\"", "\""));
+
+                if ((bool)clickResponse.success)
+                {
+                    LogMessage("✓ Attendance Log Report link clicked successfully");
+                    UpdateStatus("Waiting for Attendance Log Report page to load...", 60);
+
+                    // Wait for the page to navigate/change after the postback (same as swipe log)
+                    await Task.Delay(3000);
+
+                    LogMessage("✓ Navigation to Attendance Log Report completed");
+                }
+                else
+                {
+                    LogMessage($"ERROR clicking Attendance Log Report link: {clickResponse.error}");
+                    throw new Exception($"Attendance Log Report click failed: {clickResponse.error}");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"ERROR: Attendance Log Report click failed - {ex.Message}");
+                throw;
+            }
         }
 
         private async Task SelectEmployeeInAttendanceReport()
