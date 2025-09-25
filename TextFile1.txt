@@ -1,0 +1,595 @@
+the idea is to simulate the user activity, I do these things in sequence on this page - 
+1. goto  url https://cybagemis.cybage.com/Report%20Builder/RPTN/ReportPage.aspx
+ 2. click on + icon of leave management system (<a id="TempleteTreeViewn21" href="javascript:TreeView_ToggleNode(TempleteTreeView_Data,21,document.getElementById('TempleteTreeViewn21'),'t',document.getElementById('TempleteTreeViewn21Nodes'))"><img src="/Report%20Builder/WebResource.axd?d=Iy8IDXlsbsf2lg5v86DbNDZIofpWeb4Tivz2FB0P3j_0_uyo8tv8OCe_XWHyyzXPJMkQ9nB2wFHD48vwFf7t6XwgD8yQAU5LwP6AahNcMfYZ_KVHCJjobQhC7T0zT1Gf0&amp;t=638628422640000000" alt="Expand Leave Management System" style="border-width:0;"></a> ) , I think the javascript code TreeView_ToggleNode runs and then it opens more options 3. Out of those I click on Today and yeasterday's log (<a class="TempleteTreeView_0 TempleteTreeView_5" href="javascript:__doPostBack('TempleteTreeView','s13\\13_168')" onclick="TreeView_SelectNode(TempleteTreeView_Data, this,'TempleteTreeViewt32');" title="Today's and Yesterday's Swipe Log" id="TempleteTreeViewt32">Today's and Yesterday's Swipe Log</a>) - again note that there is probabbly a javascript that runs and opens new page view that has a html code and a table we are interested in (<table border="0" cellpadding="0" cellspacing="0" width="100%" style="padding: 0px 10px 10px 10px;">
+                            <tbody><tr>
+                                <td>
+                                    <div id="WizardPanel" style="width:100%;">
+		
+                                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                            <tbody><tr style="height: 5px">
+                                                <td colspan="2" style="height: 20px; vertical-align: middle; text-align: left; border: 0;" class="BkBold">
+                                                </td>
+                                            </tr>
+                                        </tbody></table>
+                                        <table cellpadding="0" cellspacing="3" width="100%" style="border-style: solid; border-color: #CCCCCC;
+                                            border-left: 1px; border-right: 1px; border-top: 1px; border-bottom: 1px">
+                                            <tbody><tr>
+                                                <td class="tdspacer5px" colspan="2" style="border: 0px 0px 0px 0px">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="2" style="text-align: left; border: 0;" class="BkBold">
+                                                    <table border="0" cellpadding="0" cellspacing="0" width="100%" class="ttlbg">
+                                                        <tbody><tr style="height: 30px">
+                                                            <td style="height: 30px; vertical-align: middle; padding-left: 13px" class="BkBold">
+                                                                <span class="h_redtextbold" style="vertical-align: middle; padding-left: 13px">
+                                                                    <span id="Title1" class="dshb_t_textbk" style="display:inline-block;font-size:11px;font-weight:bold;height:20px;">Today's and Yesterday's Swipe Log</span>
+                                                                    &nbsp;&nbsp;&nbsp;&nbsp;<a onclick="return OpenFAQPopup(); return false;" title="Click to view report details" style="cursor: pointer;" id="hrefSD">FAQs</a>                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody></table>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="tdspacer5px" colspan="2" style="border: 0px 0px 0px 0px">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="2" class="report_tab_h_bg">
+                                                    <table border="0" cellpadding="0" cellspacing="0" width="100%" class="report_tab_h_bg">
+                                                        <tbody><tr style="height: 27px">
+                                                            <td align="left" style="width: 25px; height: 25px;">
+                                                                <a href="#" onclick="ToggleImage('hd|fd',img_hf); return false;">
+                                                                    <img src="../App_Themes/Theme1/images/i_plus.gif" border="0" width="9" height="9" name="img_hf">
+                                                                </a>
+                                                            </td>
+                                                            <td style="padding-left: 1px; height: 25px;">
+                                                           <span class="report_section_title_label">Report Header/Footer Titles</span>  
+                                                            </td>
+                                                        </tr>
+                                                    </tbody></table>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding-left: 10px; padding-right: 10px; padding-top: 10px; border: 0">
+                                                    <div id="hd" style="display: none;">
+                                                        <fieldset style="height: 50px; vertical-align: top">
+                                                            <legend>
+                                                                <span class="dshb_t_textbk"><input id="ReportHeaderTitlesCheckBox" type="checkbox" name="ReportHeaderTitlesCheckBox" onclick="SelectAll(ReportHeaderTitlesCheckBox,ReportHeaderTitlesPanel);"><label for="ReportHeaderTitlesCheckBox">Select All Header Titles</label></span>
+                                                            </legend>
+                                                            <table border="0" cellspacing="0" cellpadding="0">
+                                                                <tbody><tr>
+                                                                    <td style="vertical-align: middle">
+                                                                        <div id="ReportHeaderTitlesPanel">
+			<table border="0" style="Border:1;">
+				<tbody><tr>
+					<td><span class="dshb_t_textbk"><input id="CybageLogoCheckBox" type="checkbox" name="CybageLogoCheckBox" onclick="CheckUncheckAll('H');"><label for="CybageLogoCheckBox">Cybage Logo</label></span></td><td><span class="dshb_t_textbk"><input id="LoginNameCheckBox" type="checkbox" name="LoginNameCheckBox" onclick="CheckUncheckAll('H');"><label for="LoginNameCheckBox">Login Name</label></span></td><td><span class="dshb_t_textbk"><input id="ReportCountCheckBox" type="checkbox" name="ReportCountCheckBox" onclick="CheckUncheckAll('H');"><label for="ReportCountCheckBox">Report Count</label></span></td><td><span class="dshb_t_textbk"><input id="ReportDateCheckBox" type="checkbox" name="ReportDateCheckBox" onclick="CheckUncheckAll('H');"><label for="ReportDateCheckBox">Report Date</label></span></td><td><span class="dshb_t_textbk"><input id="ReportNameCheckBox" type="checkbox" name="ReportNameCheckBox" onclick="CheckUncheckAll('H');"><label for="ReportNameCheckBox">Report Name</label></span></td>
+				</tr>
+			</tbody></table>
+		</div>
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody></table>
+                                                        </fieldset>
+                                                    </div>
+                                                </td>
+                                                <td style="padding-left: 10px; padding-right: 10px; padding-top: 10px; border: 0;">
+                                                    <div id="fd" style="display: none;">
+                                                        <fieldset style="height: 50px; vertical-align: top">
+                                                            <legend>
+                                                                <span class="dshb_t_textbk"><input id="ReportFooterTitlesCheckBox" type="checkbox" name="ReportFooterTitlesCheckBox" checked="checked" onclick="SelectAll(ReportFooterTitlesCheckBox,ReportFooterTitlesPanel);"><label for="ReportFooterTitlesCheckBox">Select All Footer Titles</label></span></legend>
+                                                            <table border="0" cellspacing="0" cellpadding="0">
+                                                                <tbody><tr>
+                                                                    <td style="vertical-align: middle">
+                                                                        <div id="ReportFooterTitlesPanel">
+			<table border="0" style="Border:1;">
+				<tbody><tr>
+					<td><span class="dshb_t_textbk"><input id="PageNoCheckBox" type="checkbox" name="PageNoCheckBox" checked="checked" onclick="CheckUncheckAll('F');"><label for="PageNoCheckBox">Page Number</label></span></td>
+				</tr>
+			</tbody></table>
+		</div>
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody></table>
+                                                        </fieldset>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="tdspacer5px" colspan="2" style="border: 0px 0px 0px 0px">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="2" style="height: 25px;">
+                                                    <div id="ap">
+                                                        <table border="0" cellpadding="0" cellspacing="0" width="100%" class="dshb_h_bg">
+                                                            <tbody><tr>
+                                                                <td colspan="2" class="report_tab_h_bg">
+                                                                    <table border="0" cellpadding="0" cellspacing="0" width="100%" class="report_tab_h_bg">
+                                                                        <tbody><tr style="height: 27px">
+                                                                            <td align="left" style="width: 25px; height: 25px;">
+                                                                                <a href="#" onclick="ToggleImage('op',img_op); return false;">
+                                                                                    <img src="../App_Themes/Theme1/images/i_minus.gif" border="0" width="9" height="9" name="img_op">
+                                                                                </a>
+                                                                            </td>
+                                                                            <td style="padding-left: 1px; height: 25px;">
+                                                                                <span class="report_section_title_label">Column Titles</span>  
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tbody></table>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" style="padding-left: 10px; padding-right: 10px; padding-top: 10px;
+                                                                    border: 0">
+                                                                    <div id="op">
+                                                                        <fieldset>
+                                                                            <legend>
+                                                                                <span class="dshb_t_textbk"><input id="CheckAllCheckBox" type="checkbox" name="CheckAllCheckBox" onclick="SelectAll(CheckAllCheckBox,OutPutPanel);"><label for="CheckAllCheckBox">Select All Columns</label></span></legend>
+                                                                            <table border="0" cellspacing="0" cellpadding="0">
+                                                                                <tbody><tr>
+                                                                                    <td>
+                                                                                        <div id="OutPutPanel">
+			<table border="0" style="Border:1;">
+				<tbody><tr>
+					<td style="padding-left:5px;padding-right:5px;"><span class="dshb_t_textbk" style="font-weight:bold;padding-left:5px;padding-right:5px;"><input id="1FilterCategoryCheckbox" type="checkbox" name="1FilterCategoryCheckbox" onclick="SelectFilterColumns('1FilterCategoryCheckbox',OutPutPanel);CheckAllFilterCategory('1FilterCategoryCheckbox',OutPutPanel);ExpDrillEnableDisable(document.getElementById('1FilterCategoryCheckbox'),document.getElementById('OutPutPanel'));"><label for="1FilterCategoryCheckbox">General : </label></span></td>
+				</tr><tr>
+					<td class="report_outputcolumncell"><span class="report_outputcolumn" title="0TodaySwipeLog.[EmpCode]" style="white-space:nowrap;"><input id="1EmpCodeCB7022" type="checkbox" name="1EmpCodeCB7022" checked="checked" onclick="CheckUncheckAll('O');CheckUncheckAllForFilter('1EmpCodeCB7022','O');"><label for="1EmpCodeCB7022">Employee ID</label></span></td><td class="report_outputcolumncell"><span class="report_outputcolumn" title="0TodaySwipeLog.[EmployeeName]" style="white-space:nowrap;"><input id="1EmployeeNameCB7323" type="checkbox" name="1EmployeeNameCB7323" onclick="CheckUncheckAll('O');CheckUncheckAllForFilter('1EmployeeNameCB7323','O');"><label for="1EmployeeNameCB7323">Employee Name</label></span></td><td class="report_outputcolumncell"><span class="report_outputcolumn" title="0TodaySwipeLog.[Date]" style="white-space:nowrap;"><input id="1DateCB7024" type="checkbox" name="1DateCB7024" checked="checked" onclick="CheckUncheckAll('O');CheckUncheckAllForFilter('1DateCB7024','O');"><label for="1DateCB7024">Date</label></span></td>
+				</tr><tr>
+
+				</tr><tr>
+					<td class="report_outputcolumncell"><span class="report_outputcolumn" title="0TodaySwipeLog.[MachineName]" style="white-space:nowrap;"><input id="1MachineNameCB7023" type="checkbox" name="1MachineNameCB7023" checked="checked" onclick="CheckUncheckAll('O');CheckUncheckAllForFilter('1MachineNameCB7023','O');"><label for="1MachineNameCB7023">Machine Name</label></span></td><td class="report_outputcolumncell"><span class="report_outputcolumn" title="0TodaySwipeLog.[Direction]" style="white-space:nowrap;"><input id="1DirectionCB7025" type="checkbox" name="1DirectionCB7025" checked="checked" onclick="CheckUncheckAll('O');CheckUncheckAllForFilter('1DirectionCB7025','O');"><label for="1DirectionCB7025">Direction</label></span></td><td class="report_outputcolumncell"><span class="report_outputcolumn" title="0TodaySwipeLog.[Time]" style="white-space:nowrap;"><input id="1TimeCB7021" type="checkbox" name="1TimeCB7021" checked="checked" onclick="CheckUncheckAll('O');CheckUncheckAllForFilter('1TimeCB7021','O');"><label for="1TimeCB7021">Time</label></span></td>
+				</tr><tr>
+
+				</tr><tr style="height:15px;">
+
+				</tr>
+			</tbody></table>
+		</div>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            </tbody></table>
+                                                                        </fieldset>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="tdspacer5px" colspan="2" style="border: 0px 0px 0px 0px">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="2" class="report_tab_h_bg">
+                                                    <table border="0" cellpadding="0" cellspacing="0" width="100%" class="report_tab_h_bg">
+                                                        <tbody><tr style="height: 27px">
+                                                            <td align="left" style="width: 9px;">
+                                                                <a href="#" onclick="ToggleImage('fp',img_fp); return false;">
+                                                                    <img src="../App_Themes/Theme1/images/i_minus.gif" border="0" width="9" height="9" name="img_fp">
+                                                                </a>
+                                                            </td>
+                                                            <td style="padding-left: 18px; height: 25px;">
+                                                                <span class="report_section_title_label">Filter By</span>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody></table>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="2" style="padding-left: 10px; padding-right: 10px; padding-top: 10px;
+                                                    border: 0">
+                                                    <div id="fp">
+                                                        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                            <tbody><tr>
+                                                                <td colspan="2">
+                                                                    <div id="FilterPanel" style="width:100%;">
+			<table border="0">
+				<tbody><tr>
+					<td style="padding-top:7px;padding-left:7px;"><span class="dshb_t_textbk" style="font-weight:bold;padding-left:7px;padding-top:7px;">General : </span></td>
+				</tr>
+			</tbody></table><table border="0">
+				<tbody><tr>
+					<td style="padding-left:15px;padding-top:5px;vertical-align:top;"><span class="dshb_t_textbk">Employee Name : </span><span class="dshb_t_textbk" style="color:Red;font-size:Small;font-weight:bold;">*</span></td><td style="padding-left:15px;padding-top:5px;vertical-align:top;"><span class="dshb_t_textbk">Day : </span><span class="dshb_t_textbk" style="color:Red;font-size:Small;font-weight:bold;">*</span></td>
+				</tr><tr>
+					<td style="vertical-align:top;padding-left:15px;"><select name="EmployeeIDDropDownList7322" id="EmployeeIDDropDownList7322" title="EmployeeID" class="comboBox" style="margin-right: 3px;width:auto">
+						<option value="1476">Ramkrishna Pawar - 1476</option>
+
+					</select><span id="ctl42" class="report_validator_label" style="color:Red;display:none;"></span></td><td style="vertical-align:top;padding-left:15px;"><select name="DayDropDownList8665" id="DayDropDownList8665" title="Day" class="comboBox" style="margin-right: 3px;width:auto">
+						<option value="-2">-Select-</option>
+						<option selected="selected" value="1">Today</option>
+						<option value="0">Yesterday</option>
+
+					</select><span id="ctl43" class="report_validator_label" style="color:Red;display:none;"></span></td>
+				</tr>
+			</tbody></table>
+		</div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="tdspacer10px" colspan="2">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="dshb_h_sp" style="width: 100%;" colspan="2">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="tdspacer5px" colspan="2">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2">
+                                                                    <table cellpadding="1" cellspacing="0" border="0">
+                                                                        <tbody><tr>
+                                                                            <td colspan="4" style="padding-left: 15px">
+                                                                                <span id="Label1" class="dshb_t_textbk" style="color: black; font-weight: bold; visibility: hidden;">Organized By :</span>
+                                                                            </td>
+                                                                        </tr>
+                                                                        <tr>
+                                                                            <td>
+                                                                                <div id="DistinctPanel" style="display: none;">
+			
+                                                                                
+		</div>
+                                                                            </td>
+                                                                            <td>
+                                                                                <div id="GroupingPanel">
+			
+                                                                                
+		</div>
+                                                                            </td>
+                                                                            <td>
+                                                                                <div id="SortingPanel">
+			<table border="0" style="Border:1;">
+				<tbody><tr>
+					<td><span id="SortByLabel" class="dshb_t_textbk" style="visibility: hidden;">Sort By:</span></td><td><span id="OrderByLabel" class="dshb_t_textbk" style="visibility: hidden;">Sort Order:</span></td>
+				</tr><tr>
+					<td><select name="OrderByDropDownList" id="OrderByDropDownList" class="comboBox" onchange="EnableDisableDisplayOrderBy();" style="margin-right: 3px; width: auto; visibility: hidden;" disabled="">
+						<option selected="selected" value="-1">-Select-</option>
+
+					</select></td><td><select name="OrderDropDownList" id="OrderDropDownList" class="comboBox" style="margin-right: 3px; width: auto; visibility: hidden;" disabled="">
+						<option value="0">DESC</option>
+						<option selected="selected" value="1">ASC</option>
+
+					</select></td>
+				</tr>
+			</tbody></table>
+		</div>
+                                                                            </td>
+                                                                            <td>
+                                                                                <div id="PivotPanel">
+			<table border="0" style="Border:1;">
+				<tbody><tr>
+					<td><span id="Pivot" class="dshb_t_textbk" style="visibility: hidden;">Pivot</span></td>
+				</tr><tr>
+					<td><select name="PivotDropDownList" id="PivotDropDownList" class="comboBox" onchange="EnableDisablePivotOrderByDDL();" style="margin-right: 3px; width: auto; visibility: hidden;">
+						<option selected="selected" value="-1">-Select-</option>
+
+					</select></td>
+				</tr>
+			</tbody></table>
+		</div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tbody></table>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="tdspacer5px" colspan="2">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="dshb_h_sp" style="width: 100%;" colspan="2">
+                                                                </td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="tdspacer5px" colspan="2">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="2">
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="2" style="height: 50px">
+                                                    <div id="ButtonPanel">
+			
+                                                        <table border="0" cellpadding="0" cellspacing="0" class="dshb_t_textbk" width="100%">
+                                                            <tbody><tr>
+                                                                <td colspan="4" style="width: 15%; vertical-align:middle; padding-right: 10px; padding-left: 10px; padding-bottom: 10px; border: 0; height: 20px;">
+                                                                    
+                                                                </td>
+                                                            </tr> 
+                                                            <tr>
+                                                                <td style="width: 15%; padding-right: 10px; padding-left: 10px; border: 0; height: 20px;">
+                                                                    <input type="image" name="ViewReportImageButton" id="ViewReportImageButton" title="Generate Report" src="../App_Themes/modules_themeAutumn/images/btn_GenerateReport.gif" align="texttop" onclick="CaptureDR_dates();WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;ViewReportImageButton&quot;, &quot;&quot;, true, &quot;&quot;, &quot;&quot;, false, false))" style="border-width:0px;">    
+                                                                  
+                                                                 
+                                                                 </td>
+                                                                
+                                                                <td style="width: 15%; padding-right: 10px; border: 0; height: 20px;" id="tdTemplate">
+                                                                    <input type="image" name="AddTemplateImageButton" id="AddTemplateImageButton" src="../App_Themes/modules_themeAutumn/images/btn_CreateTemplate.gif" align="absmiddle" onclick="btnClicked();" style="border-width:0px;">
+                                                                </td>
+                                                                <td style="width: 70%; padding-right: 10px; border: 0; height: 20px;">
+                                                                    <span id="TemplateSaveMsgLabel1" class="dshb_t_textbk" vspace="12" style="color:#CC0000;font-family:Arial;font-size:11px;font-weight:bold;"></span>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="tdspacer10px" colspan="3">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="dshb_h_sp" style="width: 100%;" colspan="3">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="tdspacer5px" colspan="3">
+                                                                </td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                    
+		</div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="2" style="padding-right: 5px; padding-top: 10px; border: 0; vertical-align: top;
+                                                    width: 100%;">
+                                                    <div id="QueryPanel" style="width:100%;">
+			
+                                                        <table border="0" cellpadding="0" cellspacing="0" width="100%" class="report_tab_h_bg">
+                                                            <tbody><tr>
+                                                                <td class="report_tab_h_bg">
+                                                                    <table border="0" cellpadding="0" cellspacing="0" width="100%" class="report_tab_h_bg">
+                                                                        <tbody><tr style="height: 27px;">
+                                                                            <td align="left" style="width: 9px;">
+                                                                                <a href="#" onclick="ToggleImage('qp',img_qp); return false;">
+                                                                                    <img src="../App_Themes/Theme1/images/i_plus.gif" border="0" width="9px" height="9px" name="img_qp">
+                                                                                </a>
+                                                                            </td>
+                                                                            <td style="padding-left: 15px; height: 25px;">
+                                                                                  <span class="report_section_title_label">Query Panel</span>  
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tbody></table>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="padding-left: 10px; padding-right: 10px; border: 0; vertical-align: top">
+                                                                    <div id="qp" style="display: none;">
+                                                                        <table border="0" cellspacing="0" cellpadding="0">
+                                                                            <tbody><tr>
+                                                                                <td style="width: 10px;">
+                                                                                </td>
+                                                                            </tr>
+                                                                            <tr>
+                                                                                <td>
+                                                                                    <span id="Label11" class="dshb_t_textbk" style="font-weight:bold;">Where Clause :</span>
+                                                                                </td>
+                                                                            </tr>
+                                                                            <tr>
+                                                                                <td>
+                                                                                    
+                                                                                </td>
+                                                                            </tr>
+                                                                            <tr>
+                                                                                <td style="width: 10px;">
+                                                                                </td>
+                                                                            </tr>
+                                                                        </tbody></table>
+                                                                        <table border="1" cellpadding="0" cellspacing="0" width="60%">
+                                                                            <tbody><tr>
+                                                                                <td style="width: 10px;">
+                                                                                </td>
+                                                                            </tr>
+                                                                            <tr>
+                                                                                <td>
+                                                                                    <div>
+
+			</div>
+                                                                                </td>
+                                                                            </tr>
+                                                                        </tbody></table>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="tdspacer5px" colspan="3">
+                                                                </td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                    
+		</div>
+                                                </td>
+                                            </tr>
+                                        </tbody></table>
+                                    
+	</div>
+                                </td>
+                            </tr>
+                        </tbody></table>) ... then 4. inside this code there is dropdown/select (<select name="DayDropDownList8665" id="DayDropDownList8665" title="Day" class="comboBox" style="margin-right: 3px;width:auto">
+						<option value="-2">-Select-</option>
+						<option selected="selected" value="1">Today</option>
+						<option value="0">Yesterday</option>
+
+					</select>) default is Today and we can change to yesterday and then we have to click generate report button  (<input type="image" name="ViewReportImageButton" id="ViewReportImageButton" title="Generate Report" src="../App_Themes/modules_themeAutumn/images/btn_GenerateReport.gif" align="texttop" onclick="CaptureDR_dates();WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;ViewReportImageButton&quot;, &quot;&quot;, true, &quot;&quot;, &quot;&quot;, false, false))" style="border-width:0px;">) ... once this is clicked. we get new page - where there is a table (<div id="ReportViewer1" style="display:inline-block;color:DarkBlue;border-width:1px;border-style:Inset;border-color:Black;">
+	<script language="javascript"><!--
+
+if (document.getElementById('ReportViewer1') != null)
+{
+    document.getElementById('ReportViewer1').ClientController = new RSClientController("ReportViewer1_ctl03", "", "/Report%20Builder/Reserved.ReportViewerWebControl.axd?Mode=true&ReportID=fe6b4db8d4074869bd18a220f77d2918&ControlID=21ea0115660043c3ab7547efba006b0a&Culture=1033&UICulture=1033&ReportStack=1&OpType=DocMapArea&Controller=ReportViewer1&RootLabel=b8b74d753b894238943c8ee6ef38aee0&BackColor=WhiteSmoke&Border=0px+Black+Solid&Font=font-family%3aArial%3bfont-size%3a10pt%3b", "25%", false, "/Report%20Builder/Reserved.ReportViewerWebControl.axd?Mode=true&ReportID=764b79dec8d44d099cf9d42ad98a03ba&ControlID=21ea0115660043c3ab7547efba006b0a&Culture=1033&UICulture=1033&ReportStack=1&OpType=ReportArea&Controller=ReportViewer1&LinkTarget=_top", false, false, false, false, false, false, "ReportViewer1_ctl06", false, "/Report%20Builder/Reserved.ReportViewerWebControl.axd?Mode=true&ReportID=753a8732156745baa04308660c2ba3c9&ControlID=21ea0115660043c3ab7547efba006b0a&Culture=1033&UICulture=1033&ReportStack=1&OpType=Export&FileName=b8b74d753b894238943c8ee6ef38aee0&ContentDisposition=AlwaysInline&Format=", "PrintFrameReportViewer1", "/Report%20Builder/Reserved.ReportViewerWebControl.axd?Mode=true&ReportID=89a31157b6644964be0922f29cedea15&ControlID=21ea0115660043c3ab7547efba006b0a&Culture=1033&UICulture=1033&ReportStack=1&OpType=PrintHtml", "ReportViewer1_ctl07", "ReportViewer1_ctl00", "ReportViewer1_ctl08");
+    document.getElementById('ReportViewer1').ClientController.PostBackAction =
+        function(actionType, actionParam)
+        {
+            document.getElementById("ReportViewer1_ctl04").value = actionType;
+            document.getElementById("ReportViewer1_ctl05").value = actionParam;
+            __doPostBack('ReportViewer1','');
+        };
+}var ClientReport21ea0115660043c3ab7547efba006b0a = new RSReport(document.getElementById('ReportViewer1').ClientController, "P21ea0115660043c3ab7547efba006b0a", "P21ea0115660043c3ab7547efba006b0aoReportDiv", "P21ea0115660043c3ab7547efba006b0aoReportCell", "100", "", 1, 1, false, 0, "", 0, "");
+--></script><div style="font-family:Arial;font-size:10pt;display:inline;background-color:WhiteSmoke;">
+		<div style="background-color:WhiteSmoke;padding-left:6px;background-color:WhiteSmoke;">
+			<div class=" " style="display:inline;font-family:Arial;font-size:10pt;height:30px;direction:ltr;">
+				<table cellpadding="0" cellspacing="0" style="display:inline;">
+					<tbody><tr>
+						<td height="28px"><div>
+							<table id="ReportViewer1_ctl01_ctl01_ctl00_ctl00" onclick="document.getElementById('ReportViewer1').ClientController.ActionHandler('PageNav', 1);return false;" onmouseover="this.Controller.OnHover();" onmouseout="this.Controller.OnNormal();" title="First Page" style="display: none; border: 1px solid whitesmoke; background-color: whitesmoke; cursor: default;">
+								<script type="text/javascript">
+									document.getElementById('ReportViewer1_ctl01_ctl01_ctl00_ctl00').Controller = new ReportViewerHoverButton("ReportViewer1_ctl01_ctl01_ctl00_ctl00", false, "", "", "", "WhiteSmoke", "#DDEEF7", "#99BBE2", "1px WhiteSmoke Solid", "1px #336699 Solid", "1px #336699 Solid");
+								</script><tbody><tr>
+									<td><input type="image" name="ReportViewer1$ctl01$ctl01$ctl00$ctl00$ctl00" title="First Page" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?OpType=Resource&amp;Version=9.0.21022.227&amp;Name=Microsoft.Reporting.WebForms.Icons.FirstPage.gif" alt="First Page" style="height:16px;width:16px;border-width:0px;padding:2px;"></td>
+								</tr>
+							</tbody></table><script>
+								document.getElementById('ReportViewer1_ctl01_ctl01_ctl00_ctl00').Controller.OnNormal();
+							</script><table id="ReportViewer1_ctl01_ctl01_ctl00_ctl01" disabled="disabled" onmouseout="this.Controller.OnNormal();" title="First Page" style="border: 1px solid whitesmoke; background-color: whitesmoke; cursor: default;">
+								<script type="text/javascript">
+									document.getElementById('ReportViewer1_ctl01_ctl01_ctl00_ctl01').Controller = new ReportViewerHoverButton("ReportViewer1_ctl01_ctl01_ctl00_ctl01", false, "", "", "", "WhiteSmoke", "#DDEEF7", "#99BBE2", "1px WhiteSmoke Solid", "1px #336699 Solid", "1px #336699 Solid");
+								</script><tbody><tr>
+									<td><input type="image" name="ReportViewer1$ctl01$ctl01$ctl00$ctl01$ctl00" disabled="disabled" title="First Page" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?OpType=Resource&amp;Version=9.0.21022.227&amp;Name=Microsoft.Reporting.WebForms.Icons.FirstPageDisabled.gif" alt="First Page" style="height:16px;width:16px;border-width:0px;padding:2px;cursor:default;"></td>
+								</tr>
+							</tbody></table><script>
+								document.getElementById('ReportViewer1_ctl01_ctl01_ctl00_ctl01').Controller.OnNormal();
+							</script>
+						</div></td><td width="4px"></td><td height="28px"><div>
+							<table id="ReportViewer1_ctl01_ctl01_ctl01_ctl00" onclick="document.getElementById('ReportViewer1').ClientController.ActionHandler('PageNav', document.getElementById('ReportViewer1').ClientController.CurrentPage-1);return false;" onmouseover="this.Controller.OnHover();" onmouseout="this.Controller.OnNormal();" title="Previous Page" style="display: none; border: 1px solid whitesmoke; background-color: whitesmoke; cursor: default;">
+								<script type="text/javascript">
+									document.getElementById('ReportViewer1_ctl01_ctl01_ctl01_ctl00').Controller = new ReportViewerHoverButton("ReportViewer1_ctl01_ctl01_ctl01_ctl00", false, "", "", "", "WhiteSmoke", "#DDEEF7", "#99BBE2", "1px WhiteSmoke Solid", "1px #336699 Solid", "1px #336699 Solid");
+								</script><tbody><tr>
+									<td><input type="image" name="ReportViewer1$ctl01$ctl01$ctl01$ctl00$ctl00" title="Previous Page" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?OpType=Resource&amp;Version=9.0.21022.227&amp;Name=Microsoft.Reporting.WebForms.Icons.PrevPage.gif" alt="Previous Page" style="height:16px;width:16px;border-width:0px;padding:2px;"></td>
+								</tr>
+							</tbody></table><script>
+								document.getElementById('ReportViewer1_ctl01_ctl01_ctl01_ctl00').Controller.OnNormal();
+							</script><table id="ReportViewer1_ctl01_ctl01_ctl01_ctl01" disabled="disabled" onmouseout="this.Controller.OnNormal();" title="Previous Page" style="border: 1px solid whitesmoke; background-color: whitesmoke; cursor: default;">
+								<script type="text/javascript">
+									document.getElementById('ReportViewer1_ctl01_ctl01_ctl01_ctl01').Controller = new ReportViewerHoverButton("ReportViewer1_ctl01_ctl01_ctl01_ctl01", false, "", "", "", "WhiteSmoke", "#DDEEF7", "#99BBE2", "1px WhiteSmoke Solid", "1px #336699 Solid", "1px #336699 Solid");
+								</script><tbody><tr>
+									<td><input type="image" name="ReportViewer1$ctl01$ctl01$ctl01$ctl01$ctl00" disabled="disabled" title="Previous Page" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?OpType=Resource&amp;Version=9.0.21022.227&amp;Name=Microsoft.Reporting.WebForms.Icons.PrevPageDisabled.gif" alt="Previous Page" style="height:16px;width:16px;border-width:0px;padding:2px;cursor:default;"></td>
+								</tr>
+							</tbody></table><script>
+								document.getElementById('ReportViewer1_ctl01_ctl01_ctl01_ctl01').Controller.OnNormal();
+							</script>
+						</div></td><td width="4px"></td><td height="28px"><input name="ReportViewer1$ctl01$ctl01$ctl02" type="text" maxlength="8" size="3" id="ReportViewer1_ctl01_ctl01_ctl02" disabled="" title="Current Page" onkeypress="if (event.keyCode == 10 || event.keyCode == 13) {
+var pageNumber = parseInt(this.value, 10);
+if (isNaN(pageNumber) || pageNumber &lt; 1 || pageNumber &gt; document.getElementById('ReportViewer1').ClientController.TotalPages)
+    alert('Enter a valid page number');
+else
+    document.getElementById('ReportViewer1').ClientController.ActionHandler('PageNav', pageNumber);;; return false;}" style="font-family:Arial;font-size:10pt;"></td><td width="4px"></td><td height="28px"><span style="font-family:Arial;font-size:10pt;">of</span></td><td width="4px"></td><td height="28px"><span id="ReportViewer1_ctl01_ctl01_ctl04" style="font-family:Arial;font-size:10pt;">1</span></td><td width="4px"></td><td height="28px"><div>
+							<table id="ReportViewer1_ctl01_ctl01_ctl05_ctl00" onclick="document.getElementById('ReportViewer1').ClientController.ActionHandler('PageNav', document.getElementById('ReportViewer1').ClientController.CurrentPage+1);return false;" onmouseover="this.Controller.OnHover();" onmouseout="this.Controller.OnNormal();" title="Next Page" style="display: none; border: 1px solid whitesmoke; background-color: whitesmoke; cursor: default;">
+								<script type="text/javascript">
+									document.getElementById('ReportViewer1_ctl01_ctl01_ctl05_ctl00').Controller = new ReportViewerHoverButton("ReportViewer1_ctl01_ctl01_ctl05_ctl00", false, "", "", "", "WhiteSmoke", "#DDEEF7", "#99BBE2", "1px WhiteSmoke Solid", "1px #336699 Solid", "1px #336699 Solid");
+								</script><tbody><tr>
+									<td><input type="image" name="ReportViewer1$ctl01$ctl01$ctl05$ctl00$ctl00" title="Next Page" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?OpType=Resource&amp;Version=9.0.21022.227&amp;Name=Microsoft.Reporting.WebForms.Icons.NextPage.gif" alt="Next Page" style="height:16px;width:16px;border-width:0px;padding:2px;"></td>
+								</tr>
+							</tbody></table><script>
+								document.getElementById('ReportViewer1_ctl01_ctl01_ctl05_ctl00').Controller.OnNormal();
+							</script><table id="ReportViewer1_ctl01_ctl01_ctl05_ctl01" disabled="disabled" onmouseout="this.Controller.OnNormal();" title="Next Page" style="border: 1px solid whitesmoke; background-color: whitesmoke; cursor: default;">
+								<script type="text/javascript">
+									document.getElementById('ReportViewer1_ctl01_ctl01_ctl05_ctl01').Controller = new ReportViewerHoverButton("ReportViewer1_ctl01_ctl01_ctl05_ctl01", false, "", "", "", "WhiteSmoke", "#DDEEF7", "#99BBE2", "1px WhiteSmoke Solid", "1px #336699 Solid", "1px #336699 Solid");
+								</script><tbody><tr>
+									<td><input type="image" name="ReportViewer1$ctl01$ctl01$ctl05$ctl01$ctl00" disabled="disabled" title="Next Page" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?OpType=Resource&amp;Version=9.0.21022.227&amp;Name=Microsoft.Reporting.WebForms.Icons.NextPageDisabled.gif" alt="Next Page" style="height:16px;width:16px;border-width:0px;padding:2px;cursor:default;"></td>
+								</tr>
+							</tbody></table><script>
+								document.getElementById('ReportViewer1_ctl01_ctl01_ctl05_ctl01').Controller.OnNormal();
+							</script>
+						</div></td><td width="4px"></td><td height="28px"><div>
+							<table id="ReportViewer1_ctl01_ctl01_ctl06_ctl00" onclick="document.getElementById('ReportViewer1').ClientController.ActionHandler('PageNav', document.getElementById('ReportViewer1').ClientController.TotalPages);return false;" onmouseover="this.Controller.OnHover();" onmouseout="this.Controller.OnNormal();" title="Last Page" style="display: none; border: 1px solid whitesmoke; background-color: whitesmoke; cursor: default;">
+								<script type="text/javascript">
+									document.getElementById('ReportViewer1_ctl01_ctl01_ctl06_ctl00').Controller = new ReportViewerHoverButton("ReportViewer1_ctl01_ctl01_ctl06_ctl00", false, "", "", "", "WhiteSmoke", "#DDEEF7", "#99BBE2", "1px WhiteSmoke Solid", "1px #336699 Solid", "1px #336699 Solid");
+								</script><tbody><tr>
+									<td><input type="image" name="ReportViewer1$ctl01$ctl01$ctl06$ctl00$ctl00" title="Last Page" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?OpType=Resource&amp;Version=9.0.21022.227&amp;Name=Microsoft.Reporting.WebForms.Icons.LastPage.gif" alt="Last Page" style="height:16px;width:16px;border-width:0px;padding:2px;"></td>
+								</tr>
+							</tbody></table><script>
+								document.getElementById('ReportViewer1_ctl01_ctl01_ctl06_ctl00').Controller.OnNormal();
+							</script><table id="ReportViewer1_ctl01_ctl01_ctl06_ctl01" disabled="disabled" onmouseout="this.Controller.OnNormal();" title="Last Page" style="border: 1px solid whitesmoke; background-color: whitesmoke; cursor: default;">
+								<script type="text/javascript">
+									document.getElementById('ReportViewer1_ctl01_ctl01_ctl06_ctl01').Controller = new ReportViewerHoverButton("ReportViewer1_ctl01_ctl01_ctl06_ctl01", false, "", "", "", "WhiteSmoke", "#DDEEF7", "#99BBE2", "1px WhiteSmoke Solid", "1px #336699 Solid", "1px #336699 Solid");
+								</script><tbody><tr>
+									<td><input type="image" name="ReportViewer1$ctl01$ctl01$ctl06$ctl01$ctl00" disabled="disabled" title="Last Page" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?OpType=Resource&amp;Version=9.0.21022.227&amp;Name=Microsoft.Reporting.WebForms.Icons.LastPageDisabled.gif" alt="Last Page" style="height:16px;width:16px;border-width:0px;padding:2px;cursor:default;"></td>
+								</tr>
+							</tbody></table><script>
+								document.getElementById('ReportViewer1_ctl01_ctl01_ctl06_ctl01').Controller.OnNormal();
+							</script>
+						</div></td>
+					</tr>
+				</tbody></table>
+			</div><table cellpadding="0" cellspacing="0" toolbarspacer="true" style="display:inline;">
+				<tbody><tr>
+					<td style="width:20px;"></td>
+				</tr>
+			</tbody></table><div class=" " style="display:inline;font-family:Arial;font-size:10pt;height:30px;">
+				<table cellpadding="0" cellspacing="0" style="display:inline;">
+					<tbody><tr>
+						<td height="28px"><div>
+							<table id="ReportViewer1_ctl01_ctl02_ctl00_ctl00" onclick="__doPostBack('ReportViewer1$ctl01$ctl02$ctl00$ctl00','');return false;" onmouseover="this.Controller.OnHover();" onmouseout="this.Controller.OnNormal();" title="Go back to the parent report" style="display: none; border: 1px solid whitesmoke; background-color: whitesmoke; cursor: default;">
+								<script type="text/javascript">
+									document.getElementById('ReportViewer1_ctl01_ctl02_ctl00_ctl00').Controller = new ReportViewerHoverButton("ReportViewer1_ctl01_ctl02_ctl00_ctl00", false, "", "", "", "WhiteSmoke", "#DDEEF7", "#99BBE2", "1px WhiteSmoke Solid", "1px #336699 Solid", "1px #336699 Solid");
+								</script><tbody><tr>
+									<td><input type="image" name="ReportViewer1$ctl01$ctl02$ctl00$ctl00$ctl00" title="Go back to the parent report" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?OpType=Resource&amp;Version=9.0.21022.227&amp;Name=Microsoft.Reporting.WebForms.Icons.BackEnabled.gif" alt="Go back to the parent report" style="height:16px;width:16px;border-width:0px;padding:2px;"></td>
+								</tr>
+							</tbody></table><script>
+								document.getElementById('ReportViewer1_ctl01_ctl02_ctl00_ctl00').Controller.OnNormal();
+							</script><table id="ReportViewer1_ctl01_ctl02_ctl00_ctl01" disabled="disabled" onmouseout="this.Controller.OnNormal();" title="Go back to the parent report" style="border: 1px solid whitesmoke; background-color: whitesmoke; cursor: default;">
+								<script type="text/javascript">
+									document.getElementById('ReportViewer1_ctl01_ctl02_ctl00_ctl01').Controller = new ReportViewerHoverButton("ReportViewer1_ctl01_ctl02_ctl00_ctl01", false, "", "", "", "WhiteSmoke", "#DDEEF7", "#99BBE2", "1px WhiteSmoke Solid", "1px #336699 Solid", "1px #336699 Solid");
+								</script><tbody><tr>
+									<td><input type="image" name="ReportViewer1$ctl01$ctl02$ctl00$ctl01$ctl00" disabled="disabled" title="Go back to the parent report" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?OpType=Resource&amp;Version=9.0.21022.227&amp;Name=Microsoft.Reporting.WebForms.Icons.BackDisabled.gif" alt="Go back to the parent report" style="height:16px;width:16px;border-width:0px;padding:2px;cursor:default;"></td>
+								</tr>
+							</tbody></table><script>
+								document.getElementById('ReportViewer1_ctl01_ctl02_ctl00_ctl01').Controller.OnNormal();
+							</script>
+						</div></td>
+					</tr>
+				</tbody></table>
+			</div><table cellpadding="0" cellspacing="0" toolbarspacer="true" style="display:inline;">
+				<tbody><tr>
+					<td style="width:20px;"></td>
+				</tr>
+			</tbody></table><div class=" " style="display:inline;font-family:Arial;font-size:10pt;height:30px;">
+				<table cellpadding="0" cellspacing="0" style="display:inline;">
+					<tbody><tr>
+						<td height="28px"><table id="ReportViewer1_ctl01_ctl06_ctl00" onclick="document.getElementById('ReportViewer1').ClientController.ActionHandler('Refresh', null);return false;" onmouseover="this.Controller.OnHover();" onmouseout="this.Controller.OnNormal();" title="Refresh" style="border: 1px solid whitesmoke; background-color: whitesmoke; cursor: default;">
+							<script type="text/javascript">
+								document.getElementById('ReportViewer1_ctl01_ctl06_ctl00').Controller = new ReportViewerHoverButton("ReportViewer1_ctl01_ctl06_ctl00", false, "", "", "", "WhiteSmoke", "#DDEEF7", "#99BBE2", "1px WhiteSmoke Solid", "1px #336699 Solid", "1px #336699 Solid");
+							</script><tbody><tr>
+								<td><input type="image" name="ReportViewer1$ctl01$ctl06$ctl00$ctl00" title="Refresh" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?OpType=Resource&amp;Version=9.0.21022.227&amp;Name=Microsoft.Reporting.WebForms.Icons.Refresh.gif" alt="Refresh" style="height:16px;width:16px;border-width:0px;padding:2px;"></td>
+							</tr>
+						</tbody></table><script>
+							document.getElementById('ReportViewer1_ctl01_ctl06_ctl00').Controller.OnNormal();
+						</script></td>
+					</tr>
+				</tbody></table>
+			</div>
+		</div>
+	</div><input type="hidden" name="ReportViewer1$ctl04" id="ReportViewer1_ctl04"><input type="hidden" name="ReportViewer1$ctl05" id="ReportViewer1_ctl05"><input type="hidden" name="ReportViewer1$ctl06" id="ReportViewer1_ctl06" value="1"><input type="hidden" name="ReportViewer1$ctl07" id="ReportViewer1_ctl07" value="true"><input type="hidden" name="ReportViewer1$ctl08" id="ReportViewer1_ctl08" value="false"><noscript>
+		&nbsp;Your browser does not support scripts or has been configured not to allow scripts.
+	</noscript><script language="javascript"><!--
+
+    document.getElementById('ReportViewer1').ClientController.CustomOnReportLoaded = function() {
+if (document.getElementById("ReportViewer1_ctl01_ctl01_ctl02") != null) 
+{
+document.getElementById("ReportViewer1_ctl01_ctl01_ctl02").value = document.getElementById('ReportViewer1').ClientController.CurrentPage;
+document.getElementById("ReportViewer1_ctl01_ctl01_ctl02").disabled = (document.getElementById('ReportViewer1').ClientController.TotalPages > 1) ? null : "disabled";
+document.getElementById("ReportViewer1_ctl01_ctl01_ctl04").innerHTML = document.getElementById('ReportViewer1').ClientController.TotalPages;
+}RVClientImageToggle(document.getElementById('ReportViewer1').ClientController.CurrentPage>1, 'ReportViewer1_ctl01_ctl01_ctl00_ctl00', 'ReportViewer1_ctl01_ctl01_ctl00_ctl01');RVClientImageToggle(document.getElementById('ReportViewer1').ClientController.CurrentPage>1, 'ReportViewer1_ctl01_ctl01_ctl01_ctl00', 'ReportViewer1_ctl01_ctl01_ctl01_ctl01');RVClientImageToggle(document.getElementById('ReportViewer1').ClientController.CurrentPage<document.getElementById('ReportViewer1').ClientController.TotalPages, 'ReportViewer1_ctl01_ctl01_ctl05_ctl00', 'ReportViewer1_ctl01_ctl01_ctl05_ctl01');RVClientImageToggle(document.getElementById('ReportViewer1').ClientController.CurrentPage<document.getElementById('ReportViewer1').ClientController.TotalPages, 'ReportViewer1_ctl01_ctl01_ctl06_ctl00', 'ReportViewer1_ctl01_ctl01_ctl06_ctl01');};
+    document.getElementById('ReportViewer1').ClientController.CustomOnAsyncPageChange = function() {if (document.getElementById("ReportViewer1_ctl01_ctl01_ctl02") != null) document.getElementById("ReportViewer1_ctl01_ctl01_ctl02").disabled = "disabled";RVClientImageToggle(false, 'ReportViewer1_ctl01_ctl01_ctl00_ctl00', 'ReportViewer1_ctl01_ctl01_ctl00_ctl01');RVClientImageToggle(false, 'ReportViewer1_ctl01_ctl01_ctl01_ctl00', 'ReportViewer1_ctl01_ctl01_ctl01_ctl01');RVClientImageToggle(false, 'ReportViewer1_ctl01_ctl01_ctl05_ctl00', 'ReportViewer1_ctl01_ctl01_ctl05_ctl01');RVClientImageToggle(false, 'ReportViewer1_ctl01_ctl01_ctl06_ctl00', 'ReportViewer1_ctl01_ctl01_ctl06_ctl01');};
+    document.getElementById('ReportViewer1').ClientController.CustomOnDocMapVisibilityChange = function() {};
+    document.getElementById('ReportViewer1').ClientController.CustomOnPromptAreaVisibilityChange = function() {};
+    document.getElementById('ReportViewer1').ClientController.CustomOnReloadDocMap = function() {};
+--></script><div style="border-top:0px Black Solid;">
+		<div style="overflow:auto;HEIGHT:100%;WIDTH:100%" id="P21ea0115660043c3ab7547efba006b0aoReportDiv" onscroll="A083daa0071d44527af6c28dfe3aac691ShowFixedHeaders()" onresize="A083daa0071d44527af6c28dfe3aac691ShowFixedHeaders()"><table cellspacing="0" cellpadding="0" style="background-color:Transparent;background-repeat:Repeat;padding-left:0pt;padding-top:0pt;padding-right:0pt;padding-bottom:0pt;border-style:None;"><tbody><tr><td id="P21ea0115660043c3ab7547efba006b0aoReportCell" onpropertychange="A083daa0071d44527af6c28dfe3aac691ShowFixedHeaders()" style="zoom: 100%;"><div><table cellspacing="0" cellpadding="0" border="0" cols="2" lang="en-US" style="border-collapse:collapse"><tbody><tr valign="top"><td style="WIDTH:0px;HEIGHT:19.05mm"></td><td rowspan="2" style="WIDTH:166.51mm"><table cellspacing="0" cellpadding="0" lang="en-US" style="background-color:Transparent;background-repeat:Repeat;padding-left:0pt;padding-top:0pt;padding-right:0pt;padding-bottom:0pt;border-collapse:collapse;border-style:None;" cols="5"><tbody><tr><td height="0" style="WIDTH:33.30mm"></td><td height="0" style="WIDTH:33.30mm"></td><td height="0" style="WIDTH:33.30mm"></td><td height="0" style="WIDTH:33.30mm"></td><td height="0" style="WIDTH:33.30mm"></td></tr><tr style="HEIGHT:6.35mm"><td id="P21ea0115660043c3ab7547efba006b0a16" style="background-color:Transparent;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;border:1pt Solid Black;"><div style="WIDTH:100%;overflow-x:hidden"><table cellspacing="0" cellpadding="0" border="0" lang="en-US" height="100%"><tbody><tr><td width="100%" style="font-style:Normal;font-family:Arial;font-size:10pt;font-weight:700;direction:LTR;unicode-bidi:Normal;text-align:Center;writing-mode:lr-tb;vertical-align:Top;color:Black;">Employee ID</td><td valign="Top">&nbsp;<a tabindex="1" style="cursor:pointer;" onclick="ClientReport21ea0115660043c3ab7547efba006b0a.ActionHandler('Sort','16_A');return false;" onkeypress="if(event.keyCode == 13 || event.which == 13){ClientReport21ea0115660043c3ab7547efba006b0a.ActionHandler('Sort','16_A');}return false;"><img border="0" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?Mode=true&amp;ReportID=6e89da4bc4a246078d53d364ece1d25a&amp;ControlID=21ea0115660043c3ab7547efba006b0a&amp;Culture=1033&amp;UICulture=1033&amp;ReportStack=1&amp;OpType=ReportImage&amp;ResourceStreamID=9.0.21022.227unsorted.gif"></a></td></tr></tbody></table></div></td><td id="P21ea0115660043c3ab7547efba006b0a17" style="background-color:Transparent;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;border:1pt Solid Black;"><div style="WIDTH:100%;overflow-x:hidden"><table cellspacing="0" cellpadding="0" border="0" lang="en-US" height="100%"><tbody><tr><td width="100%" style="font-style:Normal;font-family:Arial;font-size:10pt;font-weight:700;direction:LTR;unicode-bidi:Normal;text-align:Center;writing-mode:lr-tb;vertical-align:Top;color:Black;">Date</td><td valign="Top">&nbsp;<a tabindex="2" style="cursor:pointer;" onclick="ClientReport21ea0115660043c3ab7547efba006b0a.ActionHandler('Sort','17_A');return false;" onkeypress="if(event.keyCode == 13 || event.which == 13){ClientReport21ea0115660043c3ab7547efba006b0a.ActionHandler('Sort','17_A');}return false;"><img border="0" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?Mode=true&amp;ReportID=6e89da4bc4a246078d53d364ece1d25a&amp;ControlID=21ea0115660043c3ab7547efba006b0a&amp;Culture=1033&amp;UICulture=1033&amp;ReportStack=1&amp;OpType=ReportImage&amp;ResourceStreamID=9.0.21022.227unsorted.gif"></a></td></tr></tbody></table></div></td><td id="P21ea0115660043c3ab7547efba006b0a18" style="background-color:Transparent;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;border:1pt Solid Black;"><div style="WIDTH:100%;overflow-x:hidden"><table cellspacing="0" cellpadding="0" border="0" lang="en-US" height="100%"><tbody><tr><td width="100%" style="font-style:Normal;font-family:Arial;font-size:10pt;font-weight:700;direction:LTR;unicode-bidi:Normal;text-align:Center;writing-mode:lr-tb;vertical-align:Top;color:Black;">Machine Name</td><td valign="Top">&nbsp;<a tabindex="3" style="cursor:pointer;" onclick="ClientReport21ea0115660043c3ab7547efba006b0a.ActionHandler('Sort','18_A');return false;" onkeypress="if(event.keyCode == 13 || event.which == 13){ClientReport21ea0115660043c3ab7547efba006b0a.ActionHandler('Sort','18_A');}return false;"><img border="0" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?Mode=true&amp;ReportID=6e89da4bc4a246078d53d364ece1d25a&amp;ControlID=21ea0115660043c3ab7547efba006b0a&amp;Culture=1033&amp;UICulture=1033&amp;ReportStack=1&amp;OpType=ReportImage&amp;ResourceStreamID=9.0.21022.227unsorted.gif"></a></td></tr></tbody></table></div></td><td id="P21ea0115660043c3ab7547efba006b0a19" style="background-color:Transparent;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;border:1pt Solid Black;"><div style="WIDTH:100%;overflow-x:hidden"><table cellspacing="0" cellpadding="0" border="0" lang="en-US" height="100%"><tbody><tr><td width="100%" style="font-style:Normal;font-family:Arial;font-size:10pt;font-weight:700;direction:LTR;unicode-bidi:Normal;text-align:Center;writing-mode:lr-tb;vertical-align:Top;color:Black;">Direction</td><td valign="Top">&nbsp;<a tabindex="4" style="cursor:pointer;" onclick="ClientReport21ea0115660043c3ab7547efba006b0a.ActionHandler('Sort','19_A');return false;" onkeypress="if(event.keyCode == 13 || event.which == 13){ClientReport21ea0115660043c3ab7547efba006b0a.ActionHandler('Sort','19_A');}return false;"><img border="0" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?Mode=true&amp;ReportID=6e89da4bc4a246078d53d364ece1d25a&amp;ControlID=21ea0115660043c3ab7547efba006b0a&amp;Culture=1033&amp;UICulture=1033&amp;ReportStack=1&amp;OpType=ReportImage&amp;ResourceStreamID=9.0.21022.227unsorted.gif"></a></td></tr></tbody></table></div></td><td id="P21ea0115660043c3ab7547efba006b0a20" style="background-color:Transparent;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;border:1pt Solid Black;"><div style="WIDTH:100%;overflow-x:hidden"><table cellspacing="0" cellpadding="0" border="0" lang="en-US" height="100%"><tbody><tr><td width="100%" style="font-style:Normal;font-family:Arial;font-size:10pt;font-weight:700;direction:LTR;unicode-bidi:Normal;text-align:Center;writing-mode:lr-tb;vertical-align:Top;color:Black;">Time</td><td valign="Top">&nbsp;<a tabindex="5" style="cursor:pointer;" onclick="ClientReport21ea0115660043c3ab7547efba006b0a.ActionHandler('Sort','20_A');return false;" onkeypress="if(event.keyCode == 13 || event.which == 13){ClientReport21ea0115660043c3ab7547efba006b0a.ActionHandler('Sort','20_A');}return false;"><img border="0" src="/Report%20Builder/Reserved.ReportViewerWebControl.axd?Mode=true&amp;ReportID=6e89da4bc4a246078d53d364ece1d25a&amp;ControlID=21ea0115660043c3ab7547efba006b0a&amp;Culture=1033&amp;UICulture=1033&amp;ReportStack=1&amp;OpType=ReportImage&amp;ResourceStreamID=9.0.21022.227unsorted.gif"></a></td></tr></tbody></table></div></td></tr><tr><td style="HEIGHT:6.35mm"><div style="WIDTH:100%;overflow-x:hidden">1476</div></td><td style="background-color:White;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;font-style:Normal;font-family:Arial;font-size:10pt;font-weight:Normal;text-decoration:None;direction:LTR;unicode-bidi:Normal;text-align:Left;writing-mode:lr-tb;vertical-align:Top;color:Black;border:1pt Solid Black;word-wrap:break-word;"><div style="WIDTH:100%;overflow-x:hidden">25 Sep 2025</div></td><td style="background-color:White;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;font-style:Normal;font-family:Arial;font-size:10pt;font-weight:Normal;text-decoration:None;direction:LTR;unicode-bidi:Normal;text-align:Left;writing-mode:lr-tb;vertical-align:Top;color:Black;border:1pt Solid Black;word-wrap:break-word;"><div style="WIDTH:100%;overflow-x:hidden">CT2 Basement Door</div></td><td style="background-color:White;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;font-style:Normal;font-family:Arial;font-size:10pt;font-weight:Normal;text-decoration:None;direction:LTR;unicode-bidi:Normal;text-align:Left;writing-mode:lr-tb;vertical-align:Top;color:Black;border:1pt Solid Black;word-wrap:break-word;"><div style="WIDTH:100%;overflow-x:hidden">Entry</div></td><td style="background-color:White;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;font-style:Normal;font-family:Arial;font-size:10pt;font-weight:Normal;text-decoration:None;direction:LTR;unicode-bidi:Normal;text-align:Left;writing-mode:lr-tb;vertical-align:Top;color:Black;border:1pt Solid Black;word-wrap:break-word;"><div style="WIDTH:100%;overflow-x:hidden">11:56:07 AM</div></td></tr><tr><td style="HEIGHT:6.35mm"><div style="WIDTH:100%;overflow-x:hidden">1476</div></td><td style="background-color:White;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;font-style:Normal;font-family:Arial;font-size:10pt;font-weight:Normal;text-decoration:None;direction:LTR;unicode-bidi:Normal;text-align:Left;writing-mode:lr-tb;vertical-align:Top;color:Black;border:1pt Solid Black;word-wrap:break-word;"><div style="WIDTH:100%;overflow-x:hidden">25 Sep 2025</div></td><td style="background-color:White;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;font-style:Normal;font-family:Arial;font-size:10pt;font-weight:Normal;text-decoration:None;direction:LTR;unicode-bidi:Normal;text-align:Left;writing-mode:lr-tb;vertical-align:Top;color:Black;border:1pt Solid Black;word-wrap:break-word;"><div style="WIDTH:100%;overflow-x:hidden">CT2 Building 4th Floor Right Entry</div></td><td style="background-color:White;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;font-style:Normal;font-family:Arial;font-size:10pt;font-weight:Normal;text-decoration:None;direction:LTR;unicode-bidi:Normal;text-align:Left;writing-mode:lr-tb;vertical-align:Top;color:Black;border:1pt Solid Black;word-wrap:break-word;"><div style="WIDTH:100%;overflow-x:hidden">Entry</div></td><td style="background-color:White;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;font-style:Normal;font-family:Arial;font-size:10pt;font-weight:Normal;text-decoration:None;direction:LTR;unicode-bidi:Normal;text-align:Left;writing-mode:lr-tb;vertical-align:Top;color:Black;border:1pt Solid Black;word-wrap:break-word;"><div style="WIDTH:100%;overflow-x:hidden">11:58:09 AM</div></td></tr><tr style="HEIGHT:6.35mm"><td style="background-color:Transparent;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;font-style:Normal;font-family:Arial;font-size:10pt;font-weight:700;text-decoration:None;direction:RTL;unicode-bidi:Normal;text-align:Right;writing-mode:lr-tb;vertical-align:Top;color:Black;border:1pt Double Black;word-wrap:break-word;">&nbsp;</td><td style="background-color:Transparent;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;font-style:Normal;font-family:Arial;font-size:10pt;font-weight:700;text-decoration:None;direction:RTL;unicode-bidi:Normal;text-align:Left;writing-mode:lr-tb;vertical-align:Top;color:Black;border:1pt Double Black;word-wrap:break-word;">&nbsp;</td><td style="background-color:Transparent;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;font-style:Normal;font-family:Arial;font-size:10pt;font-weight:700;text-decoration:None;direction:RTL;unicode-bidi:Normal;text-align:Left;writing-mode:lr-tb;vertical-align:Top;color:Black;border:1pt Double Black;word-wrap:break-word;">&nbsp;</td><td style="background-color:Transparent;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;font-style:Normal;font-family:Arial;font-size:10pt;font-weight:700;text-decoration:None;direction:RTL;unicode-bidi:Normal;text-align:Left;writing-mode:lr-tb;vertical-align:Top;color:Black;border:1pt Double Black;word-wrap:break-word;">&nbsp;</td><td style="background-color:Transparent;background-repeat:Repeat;padding-left:2pt;padding-top:2pt;padding-right:2pt;padding-bottom:2pt;font-style:Normal;font-family:Arial;font-size:10pt;font-weight:700;text-decoration:None;direction:RTL;unicode-bidi:Normal;text-align:Left;writing-mode:lr-tb;vertical-align:Top;color:Black;border:1pt Double Black;word-wrap:break-word;">&nbsp;</td></tr></tbody></table></td></tr><tr><td style="WIDTH:0px;HEIGHT:31.75mm"></td></tr></tbody></table></div></td><td width="100%" height="0"></td></tr><tr><td width="0" height="100%"></td></tr></tbody></table></div><script language="javascript" type="text/javascript">
+<!--
+
+function A083daa0071d44527af6c28dfe3aac691ShowFixedHeaders () {}//-->
+</script>
+	</div>
+</div>) ... we have to exctract data from this table (columns = Employee ID	 
+Date	 
+Machine Name	 
+Direction	 
+Time	 ) ....
+               
