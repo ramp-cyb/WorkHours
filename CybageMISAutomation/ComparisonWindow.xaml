@@ -57,6 +57,7 @@
                         <DataGridTextColumn Header="Direction" Binding="{Binding Direction}" Width="60"/>
                         <DataGridTextColumn Header="Time" Binding="{Binding Time}" Width="80"/>
                         <DataGridTextColumn Header="Activity" Binding="{Binding Activity}" Width="60"/>
+                        <DataGridTextColumn Header="Duration" Binding="{Binding Duration}" Width="80"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </GroupBox>
@@ -82,6 +83,7 @@
                         <DataGridTextColumn Header="Direction" Binding="{Binding Direction}" Width="60"/>
                         <DataGridTextColumn Header="Time" Binding="{Binding Time}" Width="80"/>
                         <DataGridTextColumn Header="Activity" Binding="{Binding Activity}" Width="60"/>
+                        <DataGridTextColumn Header="Duration" Binding="{Binding Duration}" Width="80"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </GroupBox>

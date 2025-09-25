@@ -242,30 +242,32 @@ namespace CybageMISAutomation
                 var duration = "";
                 
                 // Apply VBA labeling logic - based on your clarification:
-                // Basement and Parking are real exit gates
-                // Floor gates default to WORK
+                // WORK = inside work area (office floors)
+                // PLAY = outside work area (basement, parking, reception, etc.)
                 if (gateType == "MainGate" && (entry.MachineName.Contains("Basement") || entry.MachineName.Contains("Parking")))
                 {
-                    // Real exit gates - basement/parking
-                    if (direction == "Exit")
-                        activity = "CAMPUS"; // Was in campus/building area
-                    else 
-                        activity = ""; // Entering building
+                    // Real exit gates - basement/parking areas are PLAY (outside work area)
+                    activity = "PLAY"; // Outside work area
                 }
                 else if (gateType == "WorkGate" || entry.MachineName.Contains("Floor"))
                 {
-                    // Floor gates - default to WORK (as you specified)
+                    // Floor gates - WORK area (inside work area)
                     activity = "WORK";
                 }
-                else if (direction == "Exit" && gateType == "PlayGate")
+                else if (gateType == "PlayGate")
                 {
-                    // Play area exits
+                    // Recreation areas - PLAY (outside work area)
+                    activity = "PLAY";
+                }
+                else if (gateType == "MainGate")
+                {
+                    // Other main gates (reception, lobby) - PLAY (outside work area)
                     activity = "PLAY";
                 }
                 else
                 {
-                    // Other cases
-                    activity = "";
+                    // Unknown areas - default to PLAY (outside work area)
+                    activity = "PLAY";
                 }
                 
                 // Calculate duration from this swipe to next swipe
