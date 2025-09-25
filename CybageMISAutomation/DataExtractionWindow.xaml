@@ -35,13 +35,10 @@
                   Margin="10">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Employee ID" Binding="{Binding EmployeeId}" Width="100"/>
-                <DataGridTextColumn Header="Employee Name" Binding="{Binding EmployeeName}" Width="200"/>
-                <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="100"/>
-                <DataGridTextColumn Header="In Time" Binding="{Binding InTime}" Width="100"/>
-                <DataGridTextColumn Header="Out Time" Binding="{Binding OutTime}" Width="100"/>
-                <DataGridTextColumn Header="Duration" Binding="{Binding Duration}" Width="100"/>
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/>
-                <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="150"/>
+                <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="120"/>
+                <DataGridTextColumn Header="Machine Name" Binding="{Binding MachineName}" Width="200"/>
+                <DataGridTextColumn Header="Direction" Binding="{Binding Direction}" Width="100"/>
+                <DataGridTextColumn Header="Time" Binding="{Binding Time}" Width="120"/>
             </DataGrid.Columns>
         </DataGrid>
         

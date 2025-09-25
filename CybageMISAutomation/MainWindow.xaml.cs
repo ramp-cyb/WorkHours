@@ -61,7 +61,7 @@ namespace CybageMISAutomation
                 LogMessage("WebView2 initialization complete. Ready for navigation.");
 
                 btnStartAutomation.IsEnabled = true;
-                btnFullAutomation.IsEnabled = true;
+                btnStartFullAutomation.IsEnabled = true;
             }
             catch (Exception ex)
             {
@@ -914,13 +914,10 @@ namespace CybageMISAutomation
                                     if (isDataRow) {
                                         var entry = {
                                             employeeId: rowData[0] || '',
-                                            employeeName: rowData[1] || '',
-                                            date: rowData[2] || '',
-                                            inTime: rowData[3] || '',
-                                            outTime: rowData[4] || '',
-                                            duration: rowData[5] || '',
-                                            status: rowData[6] || '',
-                                            location: rowData[7] || '',
+                                            date: rowData[1] || '',
+                                            machineName: rowData[2] || '',
+                                            direction: rowData[3] || '',
+                                            time: rowData[4] || '',
                                             rawData: rowData // Include all cell data for debugging
                                         };
                                         
@@ -976,13 +973,10 @@ namespace CybageMISAutomation
                         entries.Add(new SwipeLogEntry
                         {
                             EmployeeId = entry["employeeId"]?.ToString() ?? "",
-                            EmployeeName = entry["employeeName"]?.ToString() ?? "",
                             Date = entry["date"]?.ToString() ?? "",
-                            InTime = entry["inTime"]?.ToString() ?? "",
-                            OutTime = entry["outTime"]?.ToString() ?? "",
-                            Duration = entry["duration"]?.ToString() ?? "",
-                            Status = entry["status"]?.ToString() ?? "",
-                            Location = entry["location"]?.ToString() ?? ""
+                            MachineName = entry["machineName"]?.ToString() ?? "",
+                            Direction = entry["direction"]?.ToString() ?? "",
+                            Time = entry["time"]?.ToString() ?? ""
                         });
                     }
 
@@ -1074,7 +1068,7 @@ namespace CybageMISAutomation
 
                 // Disable all buttons during automation
                 SetButtonsEnabled(false);
-                btnFullAutomation.IsEnabled = false;
+                btnStartFullAutomation.IsEnabled = false;
 
                 LogMessage("🚀 Starting FULL AUTOMATION workflow...");
                 LogMessage("  This will extract both Today and Yesterday data automatically");
@@ -1121,7 +1115,7 @@ namespace CybageMISAutomation
             {
                 _isFullAutomationRunning = false;
                 SetButtonsEnabled(true);
-                btnFullAutomation.IsEnabled = true;
+                btnStartFullAutomation.IsEnabled = true;
             }
         }
 
@@ -1219,13 +1213,10 @@ namespace CybageMISAutomation
                     entries.Add(new SwipeLogEntry
                     {
                         EmployeeId = entry["employeeId"]?.ToString() ?? "",
-                        EmployeeName = entry["employeeName"]?.ToString() ?? "",
                         Date = entry["date"]?.ToString() ?? "",
-                        InTime = entry["inTime"]?.ToString() ?? "",
-                        OutTime = entry["outTime"]?.ToString() ?? "",
-                        Duration = entry["duration"]?.ToString() ?? "",
-                        Status = entry["status"]?.ToString() ?? "",
-                        Location = entry["location"]?.ToString() ?? ""
+                        MachineName = entry["machineName"]?.ToString() ?? "",
+                        Direction = entry["direction"]?.ToString() ?? "",
+                        Time = entry["time"]?.ToString() ?? ""
                     });
                 }
             }
@@ -1339,13 +1330,10 @@ namespace CybageMISAutomation
                                     if (isDataRow) {
                                         var entry = {
                                             employeeId: rowData[0] || '',
-                                            employeeName: rowData[1] || '',
-                                            date: rowData[2] || '',
-                                            inTime: rowData[3] || '',
-                                            outTime: rowData[4] || '',
-                                            duration: rowData[5] || '',
-                                            status: rowData[6] || '',
-                                            location: rowData[7] || '',
+                                            date: rowData[1] || '',
+                                            machineName: rowData[2] || '',
+                                            direction: rowData[3] || '',
+                                            time: rowData[4] || '',
                                             rawData: rowData
                                         };
                                         
@@ -1760,6 +1748,18 @@ namespace CybageMISAutomation
                 // Log but don't prevent closing
                 System.Diagnostics.Debug.WriteLine($"Error disposing WebView: {ex.Message}");
             }
+        }
+
+        private void ChkManualMode_Checked(object sender, RoutedEventArgs e)
+        {
+            pnlManualControls.Visibility = Visibility.Visible;
+            LogMessage("Manual Mode enabled - showing manual controls");
+        }
+
+        private void ChkManualMode_Unchecked(object sender, RoutedEventArgs e)
+        {
+            pnlManualControls.Visibility = Visibility.Collapsed;
+            LogMessage("Manual Mode disabled - hiding manual controls");
         }
     }
 }
