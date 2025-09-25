@@ -5,7 +5,6 @@ using Microsoft.Web.WebView2.Wpf;
 using CybageMISAutomation.Models;
 using System.Collections.ObjectModel;
 using Newtonsoft.Json;
-using System.Globalization;
 
 namespace CybageMISAutomation
 {
@@ -23,11 +22,6 @@ namespace CybageMISAutomation
         private List<SwipeLogEntry> _todayData = new List<SwipeLogEntry>();
         private List<SwipeLogEntry> _yesterdayData = new List<SwipeLogEntry>();
         private bool _isFullAutomationRunning = false;
-        
-        // Work hours calculation
-        private WorkHoursCalculation _workHoursCalculator = new WorkHoursCalculation();
-        private List<SwipeEntry> _todaySwipeEntries = new List<SwipeEntry>();
-        private List<SwipeEntry> _yesterdaySwipeEntries = new List<SwipeEntry>();
 
         public MainWindow()
         {
@@ -1211,67 +1205,28 @@ namespace CybageMISAutomation
 
         private async Task<List<SwipeLogEntry>> ExecuteDataExtraction()
         {
-            // Use enhanced extraction for Today's and Yesterday's Swipe Log data
-            var extractResult = await webView.CoreWebView2.ExecuteScriptAsync(GetSwipeLogExtractionScript());
+            // Reuse the existing data extraction logic but return the data instead of showing window
+            var extractResult = await webView.CoreWebView2.ExecuteScriptAsync(GetDataExtractionScript());
             var extractInfo = JsonConvert.DeserializeObject<dynamic>(
                 extractResult.Trim('"').Replace("\\\"", "\""));
 
             var entries = new List<SwipeLogEntry>();
-            var swipeEntries = new List<SwipeEntry>();
             
             if ((bool)extractInfo.success)
             {
                 foreach (var entry in (Newtonsoft.Json.Linq.JArray)extractInfo.entries)
                 {
-                    var swipeLogEntry = new SwipeLogEntry
+                    entries.Add(new SwipeLogEntry
                     {
                         EmployeeId = entry["employeeId"]?.ToString() ?? "",
-                        Date = entry["date"]?.ToString() ?? "",
-                        Gate = entry["gate"]?.ToString() ?? "",
-                        Direction = entry["direction"]?.ToString() ?? "",
-                        SwipeTime = entry["swipeTime"]?.ToString() ?? "",
-                        // Keep legacy fields for compatibility
                         EmployeeName = entry["employeeName"]?.ToString() ?? "",
+                        Date = entry["date"]?.ToString() ?? "",
                         InTime = entry["inTime"]?.ToString() ?? "",
                         OutTime = entry["outTime"]?.ToString() ?? "",
                         Duration = entry["duration"]?.ToString() ?? "",
                         Status = entry["status"]?.ToString() ?? "",
                         Location = entry["location"]?.ToString() ?? ""
-                    };
-                    
-                    entries.Add(swipeLogEntry);
-                    
-                    // Also create SwipeEntry for work hours calculation
-                    if (!string.IsNullOrEmpty(swipeLogEntry.SwipeTime) && 
-                        DateTime.TryParse($"{swipeLogEntry.Date} {swipeLogEntry.SwipeTime}", out DateTime swipeDateTime))
-                    {
-                        swipeEntries.Add(new SwipeEntry
-                        {
-                            EmployeeId = swipeLogEntry.EmployeeId,
-                            SwipeDateTime = swipeDateTime,
-                            Gate = swipeLogEntry.Gate,
-                            Direction = swipeLogEntry.Direction,
-                            TimeString = swipeLogEntry.SwipeTime,
-                            DateString = swipeLogEntry.Date
-                        });
-                    }
-                }
-                
-                // Calculate work hours if we have swipe entries
-                if (swipeEntries.Count > 0)
-                {
-                    var sessions = _workHoursCalculator.CalculateWorkSessions(swipeEntries);
-                    var workHours = _workHoursCalculator.GetTotalWorkHours(sessions);
-                    var playHours = _workHoursCalculator.GetTotalPlayHours(sessions);
-                    
-                    // Add calculated hours to the first entry for display
-                    if (entries.Count > 0)
-                    {
-                        entries[0].CalculatedWorkHours = _workHoursCalculator.FormatDuration(workHours);
-                        entries[0].CalculatedPlayHours = _workHoursCalculator.FormatDuration(playHours);
-                    }
-                    
-                    LogMessage($"📊 Work Hours Calculated - Work: {_workHoursCalculator.FormatDuration(workHours)}, Play: {_workHoursCalculator.FormatDuration(playHours)}");
+                    });
                 }
             }
             
@@ -1279,12 +1234,6 @@ namespace CybageMISAutomation
         }
 
         private string GetDataExtractionScript()
-        {
-            // Legacy script for backward compatibility
-            return GetSwipeLogExtractionScript();
-        }
-        
-        private string GetSwipeLogExtractionScript()
         {
             return @"
                     (function() {
@@ -1299,8 +1248,7 @@ namespace CybageMISAutomation
                                     candidateTables: [],
                                     selectedTable: null,
                                     tableRows: 0,
-                                    processedRows: 0,
-                                    reportType: 'unknown'
+                                    processedRows: 0
                                 }
                             };
 
@@ -1311,15 +1259,6 @@ namespace CybageMISAutomation
                                 return JSON.stringify(result);
                             }
                             result.debug.reportViewerFound = true;
-
-                            // Check for swipe log report indicators
-                            var pageContent = document.body.textContent || document.body.innerText;
-                            var isSwipeLogReport = pageContent.includes('Swipe Log') || 
-                                                 pageContent.includes('Entry') || 
-                                                 pageContent.includes('Exit') ||
-                                                 pageContent.includes('Gate');
-                            
-                            result.debug.reportType = isSwipeLogReport ? 'swipe_log' : 'attendance_log';
 
                             // Look for all tables within the report viewer
                             var tables = reportViewer.querySelectorAll('table');
@@ -1337,8 +1276,7 @@ namespace CybageMISAutomation
                                     rows: rows.length,
                                     cells: 0,
                                     hasNumericData: false,
-                                    hasEmployeeData: false,
-                                    hasSwipeData: false
+                                    hasEmployeeData: false
                                 };
                                 
                                 if (rows.length > 0) {
@@ -1351,17 +1289,12 @@ namespace CybageMISAutomation
                                         var rowCells = rows[j].querySelectorAll('td, th');
                                         for (var k = 0; k < rowCells.length; k++) {
                                             var text = rowCells[k].textContent.trim();
-                                            // Look for employee ID patterns (numbers)
+                                            // Look for employee ID patterns (numbers) or time patterns
                                             if (/^\d{3,6}$/.test(text)) {
                                                 tableInfo.hasEmployeeData = true;
                                             }
-                                            // Look for time patterns
                                             if (/\d{1,2}:\d{2}/.test(text)) {
                                                 tableInfo.hasNumericData = true;
-                                            }
-                                            // Look for swipe-specific patterns
-                                            if (/Entry|Exit|Gate/i.test(text)) {
-                                                tableInfo.hasSwipeData = true;
                                             }
                                         }
                                     }
@@ -1388,7 +1321,7 @@ namespace CybageMISAutomation
                             var rows = bestTable.querySelectorAll('tr');
                             result.debug.tableRows = rows.length;
 
-                            // Extract data from each row based on report type
+                            // Extract data from each row
                             for (var i = 0; i < rows.length; i++) {
                                 var row = rows[i];
                                 var cells = row.querySelectorAll('td, th');
@@ -1404,44 +1337,17 @@ namespace CybageMISAutomation
                                     var isDataRow = /^\d/.test(firstCell) && firstCell.length >= 3;
                                     
                                     if (isDataRow) {
-                                        var entry;
-                                        
-                                        // Parse based on report type and column count
-                                        if (isSwipeLogReport && rowData.length >= 5) {
-                                            // Today's and Yesterday's Swipe Log format:
-                                            // Employee ID, Date, Gate, Direction, Swipe Time
-                                            entry = {
-                                                employeeId: rowData[0] || '',
-                                                employeeName: '',
-                                                date: rowData[1] || '',
-                                                gate: rowData[2] || '',
-                                                direction: rowData[3] || '',
-                                                swipeTime: rowData[4] || '',
-                                                inTime: '',
-                                                outTime: '',
-                                                duration: '',
-                                                status: '',
-                                                location: rowData[2] || '', // Gate as location
-                                                rawData: rowData
-                                            };
-                                        } else {
-                                            // Attendance Log Report format (legacy):
-                                            // Employee ID, Employee Name, Date, In Time, Out Time, Duration, Status, Location
-                                            entry = {
-                                                employeeId: rowData[0] || '',
-                                                employeeName: rowData[1] || '',
-                                                date: rowData[2] || '',
-                                                gate: '',
-                                                direction: '',
-                                                swipeTime: '',
-                                                inTime: rowData[3] || '',
-                                                outTime: rowData[4] || '',
-                                                duration: rowData[5] || '',
-                                                status: rowData[6] || '',
-                                                location: rowData[7] || '',
-                                                rawData: rowData
-                                            };
-                                        }
+                                        var entry = {
+                                            employeeId: rowData[0] || '',
+                                            employeeName: rowData[1] || '',
+                                            date: rowData[2] || '',
+                                            inTime: rowData[3] || '',
+                                            outTime: rowData[4] || '',
+                                            duration: rowData[5] || '',
+                                            status: rowData[6] || '',
+                                            location: rowData[7] || '',
+                                            rawData: rowData
+                                        };
                                         
                                         result.entries.push(entry);
                                         result.debug.processedRows++;
@@ -1853,18 +1759,6 @@ namespace CybageMISAutomation
             {
                 // Log but don't prevent closing
                 System.Diagnostics.Debug.WriteLine($"Error disposing WebView: {ex.Message}");
-            }
-        }
-
-        private void ChkManualMode_Changed(object sender, RoutedEventArgs e)
-        {
-            if (chkManualMode.IsChecked == true)
-            {
-                pnlManualControls.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                pnlManualControls.Visibility = Visibility.Collapsed;
             }
         }
     }

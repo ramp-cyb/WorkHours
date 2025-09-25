@@ -16,65 +16,53 @@
         
         <!-- Control Panel -->
         <GroupBox Header="Report Controls" Grid.Row="0" Margin="10">
-            <StackPanel Margin="10">
-                <!-- First Row: Main Controls -->
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                    <Label Content="Employee ID:" VerticalAlignment="Center"/>
-                    <TextBox x:Name="txtEmployeeId" Width="100" Margin="5" VerticalAlignment="Center" 
-                             Text="1476" ToolTip="Enter Employee ID"/>
-                    
-                    <CheckBox x:Name="chkManualMode" Content="Manual Mode" Margin="20,0,10,0" 
-                              VerticalAlignment="Center" Unchecked="ChkManualMode_Changed" 
-                              Checked="ChkManualMode_Changed" ToolTip="Check to show manual control buttons"/>
-                    
-                    <Button x:Name="btnFullAutomation" Content="🚀 Start Full Automation" 
-                            Width="180" Height="35" Margin="20,0,10,0"
-                            Click="BtnFullAutomation_Click" IsEnabled="False"
-                            Background="#FF4CAF50" Foreground="White" FontWeight="Bold"
-                            ToolTip="Start complete automation process"/>
-                    
-                    <Button x:Name="btnReset" Content="🔄 Reset" 
-                            Width="80" Height="30" Margin="5"
-                            Click="BtnReset_Click" IsEnabled="True"/>
-                    
-                    <Button x:Name="btnShowLogs" Content="Show Logs" 
-                            Width="90" Height="30" Margin="5"
-                            Click="BtnShowLogs_Click"/>
-                </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="10">
+                <Label Content="Employee ID:" VerticalAlignment="Center"/>
+                <TextBox x:Name="txtEmployeeId" Width="100" Margin="5" VerticalAlignment="Center" 
+                         Text="1476" ToolTip="Enter Employee ID"/>
                 
-                <!-- Second Row: Manual Controls (Initially Hidden) -->
-                <StackPanel x:Name="pnlManualControls" Orientation="Horizontal" Margin="0,5,0,0" 
-                           Visibility="Collapsed">
-                    <Label Content="Report Type:" VerticalAlignment="Center"/>
-                    <ComboBox x:Name="cmbReportType" Width="100" Margin="5" VerticalAlignment="Center">
-                        <ComboBoxItem Content="Today" IsSelected="True" Tag="1"/>
-                        <ComboBoxItem Content="Yesterday" Tag="0"/>
-                    </ComboBox>
-                    
-                    <Button x:Name="btnStartAutomation" Content="Start Automation" 
-                            Width="120" Height="30" Margin="10,0,5,0"
-                            Click="BtnStartAutomation_Click" IsEnabled="False"/>
-                    
-                    <Button x:Name="btnTestPage" Content="Test Page" 
-                            Width="100" Height="30" Margin="5"
-                            Click="BtnTestPage_Click" IsEnabled="False"/>
-                    
-                    <Button x:Name="btnExpandTree" Content="Expand Tree" 
-                            Width="100" Height="30" Margin="5"
-                            Click="BtnExpandTree_Click" IsEnabled="False"/>
-                    
-                    <Button x:Name="btnClickSwipeLog" Content="Click Swipe Log" 
-                            Width="110" Height="30" Margin="5"
-                            Click="BtnClickSwipeLog_Click" IsEnabled="False"/>
-                    
-                    <Button x:Name="btnGenerateReport" Content="Generate Report" 
-                            Width="120" Height="30" Margin="5"
-                            Click="BtnGenerateReport_Click" IsEnabled="False"/>
-                    
-                    <Button x:Name="btnExtractData" Content="� Extract Data" 
-                            Width="120" Height="30" Margin="5"
-                            Click="BtnExtractData_Click" IsEnabled="False"/>
-                </StackPanel>
+                <Label Content="Report Type:" Margin="10,0,5,0" VerticalAlignment="Center"/>
+                <ComboBox x:Name="cmbReportType" Width="100" Margin="5" VerticalAlignment="Center">
+                    <ComboBoxItem Content="Today" IsSelected="True" Tag="1"/>
+                    <ComboBoxItem Content="Yesterday" Tag="0"/>
+                </ComboBox>
+                
+                <Button x:Name="btnStartAutomation" Content="Start Automation" 
+                        Width="120" Height="30" Margin="20,5,5,5"
+                        Click="BtnStartAutomation_Click" IsEnabled="False"/>
+                
+                <Button x:Name="btnTestPage" Content="Test Page" 
+                        Width="100" Height="30" Margin="5"
+                        Click="BtnTestPage_Click" IsEnabled="False"/>
+                
+                <Button x:Name="btnShowLogs" Content="Show Logs" 
+                        Width="90" Height="30" Margin="5"
+                        Click="BtnShowLogs_Click"/>
+                
+                <Button x:Name="btnExpandTree" Content="Expand Tree" 
+                        Width="100" Height="30" Margin="5"
+                        Click="BtnExpandTree_Click" IsEnabled="False"/>
+                
+                <Button x:Name="btnClickSwipeLog" Content="Click Swipe Log" 
+                        Width="110" Height="30" Margin="5"
+                        Click="BtnClickSwipeLog_Click" IsEnabled="False"/>
+                
+                <Button x:Name="btnGenerateReport" Content="Generate Report" 
+                        Width="120" Height="30" Margin="5"
+                        Click="BtnGenerateReport_Click" IsEnabled="False"/>
+                
+                <Button x:Name="btnExtractData" Content="📊 Extract Data" 
+                        Width="120" Height="30" Margin="5"
+                        Click="BtnExtractData_Click" IsEnabled="False"/>
+                
+                <Button x:Name="btnReset" Content="🔄 Reset" 
+                        Width="80" Height="30" Margin="5"
+                        Click="BtnReset_Click" IsEnabled="True"/>
+                
+                <Button x:Name="btnFullAutomation" Content="🚀 Full Automation" 
+                        Width="130" Height="30" Margin="10,5,5,5"
+                        Click="BtnFullAutomation_Click" IsEnabled="False"
+                        Background="#FF6B8E23" Foreground="White" FontWeight="Bold"/>
             </StackPanel>
         </GroupBox>
         
