@@ -24,8 +24,12 @@ namespace CybageMISAutomation
                     return new SolidColorBrush(Color.FromRgb(0x6E, 0xA8, 0xFF));
                 }
             }
-            catch { }
-            return Brushes.Transparent;
+            catch (Exception ex)
+            {
+                // Log the error for debugging - silent failures make troubleshooting difficult
+                System.Diagnostics.Debug.WriteLine($"HoursToBrushConverter error: {ex.Message}");
+                return Brushes.Transparent;
+            }
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) => throw new NotImplementedException();

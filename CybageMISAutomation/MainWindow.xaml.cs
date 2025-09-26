@@ -88,7 +88,9 @@ namespace CybageMISAutomation
                 options.AdditionalBrowserArguments = "--enable-features=msIntegratedAuth --auth-server-allowlist=*.cybage.com --auth-negotiate-delegate-allowlist=*.cybage.com --disable-web-security --disable-site-isolation-trials";
                 options.AllowSingleSignOnUsingOSPrimaryAccount = true;
                 
-                var userDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\CybageReportViewer";
+                var userDataFolder = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
+                    "CybageReportViewer");
                 var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
                 await webView.EnsureCoreWebView2Async(env);
 

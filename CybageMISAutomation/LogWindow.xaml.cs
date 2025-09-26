@@ -36,7 +36,7 @@ namespace CybageMISAutomation
                 }
 
                 // Keep only last 500 entries to prevent memory issues
-                if (_logEntries.Count > 500)
+                while (_logEntries.Count > 500)
                 {
                     _logEntries.RemoveAt(0);
                 }
