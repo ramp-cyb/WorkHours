@@ -1,0 +1,41 @@
+# Build artifacts
+bin/
+obj/
+
+# IDE files
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln.docstates
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Package files
+*.nupkg
+*.snupkg
+
+# Runtime files
+*.exe
+*.dll
+*.pdb
+*.runtimeconfig.json
+*.deps.json
+
+# CefNet binaries (will be downloaded during build)
+cef/
+**/runtimes/
+
+# User specific config
+config.local.json

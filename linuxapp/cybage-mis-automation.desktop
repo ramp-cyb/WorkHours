@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Cybage MIS Automation
+Comment=Automated employee attendance report generation tool
+Exec=/path/to/CybageMISAutomationLinux
+Icon=/path/to/icon.png
+Terminal=false
+Categories=Office;Utility;
+StartupWMClass=CybageMISAutomationLinux
+Keywords=automation;attendance;reporting;cybage;
