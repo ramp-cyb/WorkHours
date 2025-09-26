@@ -1,10 +1,15 @@
 using System.Windows;
+using CybageMISAutomation.Models;
 using System.Windows.Controls;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
-using CybageMISAutomation.Models;
 using System.Collections.ObjectModel;
 using Newtonsoft.Json;
+
+// NOTE: Dynamic JSON parsing below triggers many nullable warnings (CS8602 etc.).
+// The dynamic objects are always produced by ExecuteScriptAsync returning JSON.
+// Suppressing to keep build clean while preserving concise pattern; consider refactoring to strong types later.
+#pragma warning disable CS8602, CS8604, CS8600, CS8601
 
 namespace CybageMISAutomation
 {
@@ -26,7 +31,9 @@ namespace CybageMISAutomation
         public MainWindow()
         {
             InitializeComponent();
-            dataGridResults.ItemsSource = _swipeLogData;
+            // dataGridResults grid is currently commented out in XAML; attach if reinstated
+            if (this.FindName("dataGridResults") is DataGrid dg)
+                dg.ItemsSource = _swipeLogData;
             
             // Create and show log window
             _logWindow = new LogWindow();
@@ -61,8 +68,10 @@ namespace CybageMISAutomation
                 LogMessage("WebView2 initialization complete. Ready for navigation.");
 
                 btnStartAutomation.IsEnabled = true;
-                btnStartFullAutomation.IsEnabled = true;
+                btnStartFullAutomation.IsEnabled = true; // renamed caption only
                 btnMonthlyReport.IsEnabled = true;
+                if (this.FindName("btnFullReport") is Button frBtnInit)
+                    frBtnInit.IsEnabled = true; // Always enabled per new requirement
             }
             catch (Exception ex)
             {
@@ -1378,6 +1387,8 @@ namespace CybageMISAutomation
             btnExtractData.IsEnabled = enabled;
             btnReset.IsEnabled = enabled;
             btnMonthlyReport.IsEnabled = enabled;
+            if (this.FindName("btnFullReport") is Button frBtnToggle)
+                frBtnToggle.IsEnabled = enabled && _monthlyReportCache.Count > 0;
         }
 
         private async Task WaitForPageLoad()
@@ -1780,6 +1791,11 @@ namespace CybageMISAutomation
                 
                 if (monthlyData.Count > 0)
                 {
+                    // Cache data for calendar
+                    UpdateMonthlyReportCache(monthlyData);
+                    if (this.FindName("btnFullReport") is Button frBtnMonthly)
+                        frBtnMonthly.IsEnabled = true;
+
                     var monthlyWindow = new MonthlyWindow(txtEmployeeId.Text);
                     monthlyWindow.LoadMonthlyData(monthlyData, txtEmployeeId.Text);
                     monthlyWindow.Show();
@@ -2820,6 +2836,437 @@ namespace CybageMISAutomation
                         }
 
                         return monthlyData;
+        }
+
+        // ================= FULL REPORT SUPPORT =================
+        private List<MonthlyAttendanceEntry> _monthlyReportCache = new();
+        private List<WorkHoursCalculation> _todayWorkHoursCalculations = new();
+        private List<WorkHoursCalculation> _yesterdayWorkHoursCalculations = new();
+
+        // Call this after monthly extraction succeeds
+        private void UpdateMonthlyReportCache(IEnumerable<MonthlyAttendanceEntry> entries)
+        {
+            _monthlyReportCache = entries?.ToList() ?? new List<MonthlyAttendanceEntry>();
+        }
+
+        // Hook points for existing today / yesterday calculation results
+        private void UpdateTodayCalculations(IEnumerable<WorkHoursCalculation> entries)
+        {
+            _todayWorkHoursCalculations = entries?.ToList() ?? new List<WorkHoursCalculation>();
+            LogMessage($"[CACHE] Today calculations updated: {_todayWorkHoursCalculations.Count} entries");
+            foreach (var calc in _todayWorkHoursCalculations)
+            {
+                LogMessage($"[CACHE] Today: {calc.Date:yyyy-MM-dd} = {calc.WorkingHoursDisplay}");
+            }
+        }
+        private void UpdateYesterdayCalculations(IEnumerable<WorkHoursCalculation> entries)
+        {
+            _yesterdayWorkHoursCalculations = entries?.ToList() ?? new List<WorkHoursCalculation>();
+            LogMessage($"[CACHE] Yesterday calculations updated: {_yesterdayWorkHoursCalculations.Count} entries");
+            foreach (var calc in _yesterdayWorkHoursCalculations)
+            {
+                LogMessage($"[CACHE] Yesterday: {calc.Date:yyyy-MM-dd} = {calc.WorkingHoursDisplay}");
+            }
+        }
+
+        private async void BtnFullReport_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                btnFullReport.IsEnabled = false;
+                LogMessage("Full Report button triggered: running complete automation chain...");
+                await RunFullCalendarAutomation();
+                ShowFullCalendarWindow();
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Full Report failed: {ex.Message}");
+            }
+            finally
+            {
+                btnFullReport.IsEnabled = true;
+            }
+        }
+
+        private async Task RunFullCalendarAutomation(bool showWindowOnCompletion = false)
+        {
+            // Sequence: Monthly -> Today -> Yesterday -> Calendar
+            try
+            {
+                LogMessage("[CALENDAR AUTO] Starting monthly extraction...");
+                var monthly = await ExtractMonthlyAttendanceData();
+                UpdateMonthlyReportCache(monthly);
+                LogMessage($"[CALENDAR AUTO] Monthly cached: {monthly.Count} records");
+
+                LogMessage("[CALENDAR AUTO] Extracting Today swipe log (lightweight) ...");
+                var todayCalc = await QuickDailyHoursExtraction(isToday:true);
+                UpdateTodayCalculations(todayCalc);
+                LogMessage($"[CALENDAR AUTO] Today calc entries: {todayCalc.Count}");
+
+                LogMessage("[CALENDAR AUTO] Extracting Yesterday swipe log (lightweight) ...");
+                var yestCalc = await QuickDailyHoursExtraction(isToday:false);
+                UpdateYesterdayCalculations(yestCalc);
+                LogMessage($"[CALENDAR AUTO] Yesterday calc entries: {yestCalc.Count}");
+
+                if (showWindowOnCompletion)
+                    ShowFullCalendarWindow();
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"[CALENDAR AUTO] Failed: {ex.Message}");
+            }
+        }
+
+        private void ShowFullCalendarWindow()
+        {
+            var model = Services.FullReportBuilder.Build(
+                _monthlyReportCache,
+                _todayWorkHoursCalculations,
+                _yesterdayWorkHoursCalculations);
+            var win = new FullReportWindow(model) { Owner = this };
+            win.Show();
+        }
+
+        private async Task<List<WorkHoursCalculation>> QuickDailyHoursExtraction(bool isToday)
+        {
+            var dayType = isToday ? "Today" : "Yesterday";
+            LogMessage($"[DAILY] Starting {dayType} extraction...");
+            var list = new List<WorkHoursCalculation>();
+            try
+            {
+                LogMessage($"[DAILY] Navigating to MIS for {dayType}...");
+                webView.CoreWebView2.Navigate(MIS_URL);
+                await WaitForPageLoad();
+                
+                LogMessage($"[DAILY] Expanding tree for {dayType}...");
+                await ExecuteExpandTree();
+                
+                LogMessage($"[DAILY] Clicking swipe log for {dayType}...");
+                await ExecuteClickSwipeLog();
+                
+                LogMessage($"[DAILY] Setting report type for {dayType} (index: {(isToday ? 0 : 1)})...");
+                cmbReportType.SelectedIndex = isToday ? 0 : 1;
+                
+                LogMessage($"[DAILY] Generating report for {dayType}...");
+                await ExecuteGenerateReport();
+                
+                LogMessage($"[DAILY] Extracting data for {dayType}...");
+                var entries = await ExecuteDataExtraction();
+                LogMessage($"[DAILY] Raw entries extracted for {dayType}: {entries.Count}");
+                
+                if (entries.Any())
+                {
+                    // Use the same working logic as ComparisonWindow
+                    var labeledEntries = LabelSwipeEntries(entries);
+                    var workHours = CalculateWorkHoursFromLabels(labeledEntries);
+                    
+                    LogMessage($"[DAILY] Labeled entries for {dayType}: {labeledEntries.Count}");
+                    LogMessage($"[DAILY] Calculated work hours for {dayType}: {workHours}");
+                    
+                    var grouped = entries.GroupBy(e => e.Date);
+                    foreach (var g in grouped)
+                    {
+                        var targetDate = DateTime.TryParse(g.Key, out var dt) ? dt : (isToday ? DateTime.Today : DateTime.Today.AddDays(-1));
+                        
+                        list.Add(new WorkHoursCalculation
+                        {
+                            Date = targetDate,
+                            WorkingHoursDisplay = workHours,
+                            TotalWorkingHoursDisplay = workHours,
+                            Status = workHours != "0:00" && workHours != "Error" ? "Present" : "No Data"
+                        });
+                        
+                        LogMessage($"[DAILY] Added calculation for {dayType}: Date={targetDate:yyyy-MM-dd}, Hours={workHours}");
+                    }
+                }
+                else
+                {
+                    LogMessage($"[DAILY] No entries found for {dayType}");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"[DAILY] {dayType} extraction failed: {ex.Message}");
+                LogMessage($"[DAILY] Stack trace: {ex.StackTrace}");
+            }
+            
+            LogMessage($"[DAILY] {dayType} extraction completed with {list.Count} calculation entries");
+            return list;
+        }
+
+        private static TimeSpan CalcHoursSpan(IEnumerable<string> times)
+        {
+            var parsed = new List<TimeSpan>();
+            foreach (var t in times)
+            {
+                // Handle both "HH:mm:ss" and "HH:mm:ss AM/PM" formats
+                if (TimeSpan.TryParse(t, out var ts))
+                {
+                    parsed.Add(ts);
+                }
+                else if (DateTime.TryParse(t, out var dt))
+                {
+                    // If it's in AM/PM format, parse as DateTime and extract TimeOfDay
+                    parsed.Add(dt.TimeOfDay);
+                }
+            }
+            
+            if (parsed.Count < 2) return TimeSpan.Zero;
+            var start = parsed.Min(); 
+            var end = parsed.Max();
+            
+            // Handle case where work spans midnight (end < start)
+            if (end < start)
+            {
+                end = end.Add(TimeSpan.FromDays(1));
+            }
+            
+            return end - start;
+        }
+
+        private static string FormatSpan(TimeSpan span)
+        {
+            if (span <= TimeSpan.Zero) return string.Empty;
+            return $"{(int)span.TotalHours:00}:{span.Minutes:00}";
+        }
+
+        // Copy of working logic from ComparisonWindow for chunk-based calculation
+        private string IdentifyGateType(string machineName)
+        {
+            if (string.IsNullOrEmpty(machineName))
+                return "Unknown";
+
+            // Based on CT2 building structure and VBA gate classification
+            // Main gates - building/campus entry points (like Basement, Parking)
+            var mainGatePatterns = new[] { "Basement", "Parking", "Tripod", "Ground", "Reception", "Main Gate", "Security", "Entry Gate" };
+            
+            // Work gates - actual office/work floors (4th Floor, 5th Floor, etc.)
+            var workGatePatterns = new[] { "4th Floor", "5th Floor", "6th Floor", "7th Floor", "8th Floor", "9th Floor", "Floor Le", "Floor Ri", "Building.*Floor", "Office Floor" };
+            
+            // Play gates - recreation areas (cafeteria, lobby, etc.)
+            var playGatePatterns = new[] { "Cafeteria", "Recreation", "Lobby", "Canteen", "Food Court", "Gaming", "Break" };
+
+            // Check in order of specificity
+            foreach (var pattern in workGatePatterns)
+            {
+                if (machineName.Contains(pattern, StringComparison.OrdinalIgnoreCase))
+                    return "WorkGate";
+            }
+
+            foreach (var pattern in playGatePatterns)
+            {
+                if (machineName.Contains(pattern, StringComparison.OrdinalIgnoreCase))
+                    return "PlayGate";
+            }
+
+            foreach (var pattern in mainGatePatterns)
+            {
+                if (machineName.Contains(pattern, StringComparison.OrdinalIgnoreCase))
+                    return "MainGate";
+            }
+
+            return "Unknown";
+        }
+
+        private DateTime ParseTime(string timeStr)
+        {
+            if (string.IsNullOrEmpty(timeStr))
+                return DateTime.MinValue;
+
+            // Try to parse various time formats
+            var formats = new[]
+            {
+                "hh:mm:ss tt",  // 12-hour format with AM/PM
+                "h:mm:ss tt",   // 12-hour format with AM/PM (single digit hour)
+                "HH:mm:ss",
+                "H:mm:ss", 
+                "HH:mm",
+                "H:mm",
+                "dd/MM/yyyy HH:mm:ss",
+                "dd-MM-yyyy HH:mm:ss",
+                "MM/dd/yyyy HH:mm:ss",
+                "yyyy-MM-dd HH:mm:ss"
+            };
+
+            foreach (var format in formats)
+            {
+                if (DateTime.TryParseExact(timeStr, format, null, System.Globalization.DateTimeStyles.None, out DateTime result))
+                {
+                    // If only time was parsed, assume today's date
+                    if (result.Date == DateTime.MinValue.Date)
+                    {
+                        result = DateTime.Today.Add(result.TimeOfDay);
+                    }
+                    return result;
+                }
+            }
+
+            // Fallback to general parsing
+            if (DateTime.TryParse(timeStr, out DateTime generalResult))
+            {
+                return generalResult;
+            }
+
+            return DateTime.MinValue;
+        }
+
+        private List<SwipeLogEntry> LabelSwipeEntries(List<SwipeLogEntry> entries)
+        {
+            if (entries == null || entries.Count == 0)
+                return entries ?? new List<SwipeLogEntry>();
+
+            var labeledEntries = new List<SwipeLogEntry>();
+            
+            // Sort entries by time 
+            var sortedEntries = entries.OrderBy(e => ParseTime(e.Time)).ToList();
+            
+            LogMessage($"[LABEL] Labeling {entries.Count} swipe entries and calculating durations");
+            
+            for (int i = 0; i < sortedEntries.Count; i++)
+            {
+                var entry = sortedEntries[i];
+                var gateType = IdentifyGateType(entry.MachineName);
+                var direction = entry.Direction;
+                var activity = "";
+                var duration = "";
+                
+                // Apply VBA labeling logic - based on your clarification:
+                // WORK = inside work area (office floors)
+                // PLAY = outside work area (basement, parking, reception, etc.)
+                if (gateType == "MainGate" && (entry.MachineName.Contains("Basement") || entry.MachineName.Contains("Parking")))
+                {
+                    // Real exit gates - basement/parking areas are PLAY (outside work area)
+                    activity = "PLAY"; // Outside work area
+                }
+                else if (gateType == "WorkGate" || entry.MachineName.Contains("Floor"))
+                {
+                    // Floor gates - WORK area (inside work area)
+                    activity = "WORK";
+                }
+                else if (gateType == "PlayGate")
+                {
+                    // Recreation areas - PLAY (outside work area)
+                    activity = "PLAY";
+                }
+                else if (gateType == "MainGate")
+                {
+                    // Other main gates (reception, lobby) - PLAY (outside work area)
+                    activity = "PLAY";
+                }
+                else
+                {
+                    // Unknown areas - default to PLAY (outside work area)
+                    activity = "PLAY";
+                }
+                
+                // Calculate duration from this swipe to next swipe
+                if (i < sortedEntries.Count - 1)
+                {
+                    var currentTime = ParseTime(entry.Time);
+                    var nextTime = ParseTime(sortedEntries[i + 1].Time);
+                    
+                    if (nextTime > currentTime)
+                    {
+                        var timeDiff = nextTime - currentTime;
+                        var totalMinutes = (int)timeDiff.TotalMinutes;
+                        var hours = totalMinutes / 60;
+                        var minutes = totalMinutes % 60;
+                        duration = $"{hours}:{minutes:D2}";
+                    }
+                    else
+                    {
+                        duration = "0:00";
+                    }
+                }
+                else
+                {
+                    duration = "-"; // Last entry has no next swipe
+                }
+                
+                // Create labeled entry with duration
+                var labeledEntry = new SwipeLogEntry
+                {
+                    EmployeeId = entry.EmployeeId,
+                    Date = entry.Date,
+                    MachineName = entry.MachineName,
+                    Direction = entry.Direction,
+                    Time = entry.Time,
+                    Activity = activity,
+                    Duration = duration
+                };
+                
+                LogMessage($"[LABEL] {entry.Time} | {direction} | {entry.MachineName} | {gateType} → Activity: {activity} | Duration: {duration}");
+                labeledEntries.Add(labeledEntry);
+            }
+            
+            return labeledEntries;
+        }
+
+        private string CalculateWorkHoursFromLabels(List<SwipeLogEntry> labeledEntries)
+        {
+            if (labeledEntries == null || labeledEntries.Count == 0)
+                return "0:00";
+
+            try
+            {
+                var totalWorkMinutes = 0.0;
+                
+                LogMessage($"[CALC] Calculating work time from {labeledEntries.Count} labeled entries");
+                
+                // Calculate time chunks between consecutive swipes
+                for (int i = 0; i < labeledEntries.Count - 1; i++)
+                {
+                    var currentEntry = labeledEntries[i];
+                    var nextEntry = labeledEntries[i + 1];
+                    
+                    // The time chunk between current and next swipe has the activity of current EXIT
+                    if (currentEntry.Activity == "WORK")
+                    {
+                        var startTime = ParseTime(currentEntry.Time);
+                        var endTime = ParseTime(nextEntry.Time);
+                        
+                        if (endTime > startTime)
+                        {
+                            var chunkMinutes = (endTime - startTime).TotalMinutes;
+                            totalWorkMinutes += chunkMinutes;
+                            
+                            LogMessage($"[CALC] WORK chunk: {startTime:HH:mm:ss} to {endTime:HH:mm:ss} = {chunkMinutes:F0} minutes");
+                        }
+                    }
+                }
+                
+                // Handle ongoing work for today (if last entry indicates work)
+                if (labeledEntries.Count > 0)
+                {
+                    var lastEntry = labeledEntries.Last();
+                    if (lastEntry.Activity == "WORK")
+                    {
+                        var lastTime = ParseTime(lastEntry.Time);
+                        var now = DateTime.Now;
+                        
+                        // Only add ongoing time if it's the same day
+                        if (now.Date == lastTime.Date && now > lastTime)
+                        {
+                            var ongoingMinutes = (now - lastTime).TotalMinutes;
+                            totalWorkMinutes += ongoingMinutes;
+                            
+                            LogMessage($"[CALC] ONGOING work: {lastTime:HH:mm:ss} to {now:HH:mm:ss} = {ongoingMinutes:F0} minutes");
+                        }
+                    }
+                }
+                
+                var hours = (int)(totalWorkMinutes / 60);
+                var minutes = (int)(totalWorkMinutes % 60);
+                
+                LogMessage($"[CALC] TOTAL WORK TIME: {totalWorkMinutes:F0} minutes = {hours}:{minutes:D2}");
+                
+                return $"{hours}:{minutes:D2}";
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"[CALC] Error calculating work hours: {ex.Message}");
+                return "Error";
+            }
         }
 
         #endregion

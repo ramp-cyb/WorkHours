@@ -1,0 +1,103 @@
+<Window x:Class="CybageMISAutomation.FullReportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:CybageMISAutomation"
+        Title="Full Report" Height="900" Width="1400" Background="#F5F7FA" WindowState="Maximized">
+    <Window.Resources>
+        <local:HoursToBrushConverter x:Key="HoursToBrush"/>
+        <Style x:Key="CalendarCellStyle" TargetType="Border">
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#CCD2D9"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsPlaceholder}" Value="True">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="BorderBrush" Value="Transparent"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="Weekly Off">
+                    <Setter Property="Background" Value="#F0F0F0"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="Leave">
+                    <Setter Property="Background" Value="#FFE7D1"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="Holiday">
+                    <Setter Property="Background" Value="#FFF7CC"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="No Data">
+                    <Setter Property="Opacity" Value="0.4"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="HeaderCellStyle" TargetType="Border">
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#999"/>
+            <Setter Property="Background" Value="#E8E8E8"/>
+            <Setter Property="Padding" Value="8"/>
+        </Style>
+    </Window.Resources>
+    <DockPanel>
+        <StackPanel Orientation="Vertical" DockPanel.Dock="Top" Margin="16,12,16,8">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Full Month Report" FontSize="24" FontWeight="Bold" Foreground="#222"/>
+                <TextBlock Text="|" VerticalAlignment="Center" Margin="16,0,16,0"/>
+                <TextBlock Name="TxtSummary" VerticalAlignment="Center" FontSize="14"/>
+            </StackPanel>
+            <!-- Legend -->
+            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Rectangle Width="20" Height="16" Fill="#FFB8B8" Stroke="#CC6666"/><TextBlock Text="  &lt;7h" FontSize="12"/></StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Rectangle Width="20" Height="16" Fill="#DFF5DD" Stroke="#8DBA85"/><TextBlock Text="  7-&lt;8h" FontSize="12"/></StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Rectangle Width="20" Height="16" Fill="#A6E3A1" Stroke="#5A9953"/><TextBlock Text="  8-&lt;9h" FontSize="12"/></StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Rectangle Width="20" Height="16" Fill="#6EA8FF" Stroke="#2F6AD9"/><TextBlock Text="  >=9h" FontSize="12"/></StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Rectangle Width="20" Height="16" Fill="#F0F0F0" Stroke="#CCCCCC"/><TextBlock Text="  WO" FontSize="12"/></StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Rectangle Width="20" Height="16" Fill="#FFE7D1" Stroke="#D6A77A"/><TextBlock Text="  Leave" FontSize="12"/></StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Rectangle Width="20" Height="16" Fill="#FFF7CC" Stroke="#D6C76A"/><TextBlock Text="  Holiday" FontSize="12"/></StackPanel>
+            </StackPanel>
+        </StackPanel>
+        
+        <Grid x:Name="CalendarGrid" Margin="16,0,16,16" ShowGridLines="True">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Headers -->
+                <RowDefinition Height="*"/>    <!-- Week 1 -->
+                <RowDefinition Height="*"/>    <!-- Week 2 -->
+                <RowDefinition Height="*"/>    <!-- Week 3 -->
+                <RowDefinition Height="*"/>    <!-- Week 4 -->
+                <RowDefinition Height="*"/>    <!-- Week 5 -->
+                <RowDefinition Height="*"/>    <!-- Week 6 -->
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/> <!-- Mon -->
+                <ColumnDefinition Width="*"/> <!-- Tue -->
+                <ColumnDefinition Width="*"/> <!-- Wed -->
+                <ColumnDefinition Width="*"/> <!-- Thu -->
+                <ColumnDefinition Width="*"/> <!-- Fri -->
+                <ColumnDefinition Width="*"/> <!-- Sat -->
+                <ColumnDefinition Width="*"/> <!-- Sun -->
+            </Grid.ColumnDefinitions>
+            
+            <!-- Headers -->
+            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource HeaderCellStyle}">
+                <TextBlock Text="Monday" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+            </Border>
+            <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource HeaderCellStyle}">
+                <TextBlock Text="Tuesday" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+            </Border>
+            <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource HeaderCellStyle}">
+                <TextBlock Text="Wednesday" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+            </Border>
+            <Border Grid.Row="0" Grid.Column="3" Style="{StaticResource HeaderCellStyle}">
+                <TextBlock Text="Thursday" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+            </Border>
+            <Border Grid.Row="0" Grid.Column="4" Style="{StaticResource HeaderCellStyle}">
+                <TextBlock Text="Friday" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+            </Border>
+            <Border Grid.Row="0" Grid.Column="5" Style="{StaticResource HeaderCellStyle}">
+                <TextBlock Text="Saturday" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+            </Border>
+            <Border Grid.Row="0" Grid.Column="6" Style="{StaticResource HeaderCellStyle}">
+                <TextBlock Text="Sunday" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>
