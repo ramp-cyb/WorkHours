@@ -1,0 +1,128 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="CybageMISAutomationLinux.Views.MainWindow"
+        Title="Cybage MIS Report Automation (Linux)"
+        Width="1400" Height="900"
+        WindowStartupLocation="CenterScreen">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="200"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Control Panel -->
+        <Border Grid.Row="0" Margin="10" BorderBrush="Gray" BorderThickness="1" CornerRadius="5">
+            <StackPanel Margin="10">
+                <TextBlock Text="Report Controls" FontWeight="Bold" Margin="0,0,0,10"/>
+                
+                <!-- First Row: Basic Controls -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                    <TextBlock Text="Employee ID:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBox x:Name="txtEmployeeId" Width="100" Margin="5" VerticalAlignment="Center" 
+                             Text="" ToolTip.Tip="Enter Employee ID (loaded from config.json)"/>
+                    
+                    <CheckBox x:Name="chkShowLogs" Content="Show Log Window" 
+                              VerticalAlignment="Center" Margin="20,0,0,0"/>
+                    
+                    <Button x:Name="btnStartFullAutomation" Content="Today/Yesterday Report" 
+                            Width="150" Height="35" Margin="30,0,0,0"
+                            IsEnabled="False"
+                            Background="#FF6B8E23" Foreground="White" FontWeight="Bold"/>
+                    
+                    <Button x:Name="btnReset" Content="🔄 Reset" 
+                            Width="80" Height="30" Margin="20,0,0,0"
+                            IsEnabled="True"/>
+                    
+                    <Button x:Name="btnMonthlyReport" Content="📅 Monthly Report" 
+                            Width="130" Height="35" Margin="20,0,0,0"
+                            IsEnabled="False"
+                            Background="#FF4682B4" Foreground="White" FontWeight="Bold"/>
+                    
+                    <Button x:Name="btnFullReport" Content="📊 Full Calendar Report"
+                            Width="160" Height="40" Margin="20,0,0,0"
+                            IsEnabled="True"
+                            Background="#FF228B22" Foreground="White" FontWeight="Bold" FontSize="14"
+                            ToolTip.Tip="Generate comprehensive monthly calendar with today/yesterday data"/>
+                </StackPanel>
+                
+                <!-- Second Row: Manual Controls (Hidden by default) -->
+                <StackPanel x:Name="pnlManualControls" Orientation="Horizontal" IsVisible="False">
+                    <TextBlock Text="Report Type:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <ComboBox x:Name="cmbReportType" Width="100" Margin="5" VerticalAlignment="Center" SelectedIndex="0">
+                        <ComboBoxItem Content="Today" Tag="1"/>
+                        <ComboBoxItem Content="Yesterday" Tag="0"/>
+                    </ComboBox>
+                    
+                    <Button x:Name="btnStartAutomation" Content="Start Automation" 
+                            Width="120" Height="30" Margin="10,5,5,5"
+                            IsEnabled="False"/>
+                    
+                    <Button x:Name="btnTestPage" Content="Test Page" 
+                            Width="100" Height="30" Margin="5"
+                            IsEnabled="False"/>
+                    
+                    <Button x:Name="btnShowLogs" Content="Show Logs" 
+                            Width="90" Height="30" Margin="5"/>
+                    
+                    <Button x:Name="btnExpandTree" Content="Expand Tree" 
+                            Width="100" Height="30" Margin="5"
+                            IsEnabled="False"/>
+                    
+                    <Button x:Name="btnClickSwipeLog" Content="Click Swipe Log" 
+                            Width="110" Height="30" Margin="5"
+                            IsEnabled="False"/>
+                    
+                    <Button x:Name="btnGenerateReport" Content="Generate Report" 
+                            Width="120" Height="30" Margin="5"
+                            IsEnabled="False"/>
+                    
+                    <Button x:Name="btnExtractData" Content="📊 Extract Data" 
+                            Width="120" Height="30" Margin="5"
+                            IsEnabled="False"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+        
+        <!-- Status Panel -->
+        <Border Grid.Row="1" Margin="10,0,10,10" BorderBrush="Gray" BorderThickness="1" CornerRadius="5">
+            <StackPanel Margin="10">
+                <TextBlock Text="Status" FontWeight="Bold" Margin="0,0,0,5"/>
+                <TextBlock x:Name="txtStatus" Text="Initializing WebView..." 
+                          Foreground="Blue" FontWeight="Bold"/>
+                <ProgressBar x:Name="progressBar" Height="20" Margin="0,5,0,0" 
+                            Minimum="0" Maximum="100" Value="0"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Web Browser -->
+        <Border Grid.Row="2" Margin="10,0,10,10" BorderBrush="Gray" BorderThickness="1" CornerRadius="5">
+            <StackPanel Margin="5">
+                <TextBlock Text="Web Browser (Placeholder for CefNet/Chromium Integration)" FontWeight="Bold" Margin="0,0,0,5"/>
+                <TextBox x:Name="txtUrlInput" Watermark="Enter URL..." Margin="0,0,0,5"/>
+                <Button x:Name="btnNavigate" Content="Navigate" Width="100" HorizontalAlignment="Left" Margin="0,0,0,10"/>
+                <Border BorderBrush="DarkGray" BorderThickness="2" MinHeight="400">
+                    <TextBlock x:Name="txtWebContent" 
+                             Text="Web browser content will be displayed here when CefNet is properly integrated."
+                             TextWrapping="Wrap"
+                             Margin="10"
+                             VerticalAlignment="Center"
+                             HorizontalAlignment="Center"
+                             FontStyle="Italic"
+                             Foreground="Gray"/>
+                </Border>
+            </StackPanel>
+        </Border>
+        
+        <!-- Data Grid (Commented out like in original)
+        <Border Grid.Row="3" Margin="10,5,10,10" BorderBrush="Gray" BorderThickness="1" CornerRadius="5">
+            <StackPanel Margin="5">
+                <TextBlock Text="Extracted Swipe Data" FontWeight="Bold" Margin="0,0,0,5"/>
+                <DataGrid x:Name="dataGridResults" Margin="5" 
+                         IsReadOnly="True"/>
+            </StackPanel>
+        </Border>-->
+    </Grid>
+</Window>

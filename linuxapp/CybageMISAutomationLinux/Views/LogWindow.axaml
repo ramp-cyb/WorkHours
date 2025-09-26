@@ -1,0 +1,39 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="CybageMISAutomationLinux.Views.LogWindow"
+        Title="Application Logs"
+        Width="800" Height="600"
+        WindowStartupLocation="Manual">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Log display -->
+        <Border Grid.Row="0" Margin="10" BorderBrush="Gray" BorderThickness="1" CornerRadius="5">
+            <ScrollViewer>
+                <TextBox x:Name="txtLogs" 
+                         IsReadOnly="True"
+                         TextWrapping="Wrap"
+                         AcceptsReturn="True"
+                         FontFamily="Consolas,Monaco,Courier New,monospace"
+                         FontSize="11"
+                         Background="Black"
+                         Foreground="LightGreen"
+                         Margin="5"/>
+            </ScrollViewer>
+        </Border>
+        
+        <!-- Control buttons -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+            <Button x:Name="btnClearLogs" Content="Clear Logs" 
+                    Width="80" Height="30" Margin="5"/>
+            <Button x:Name="btnSaveLogs" Content="Save Logs" 
+                    Width="80" Height="30" Margin="5"/>
+            <Button x:Name="btnClose" Content="Close" 
+                    Width="60" Height="30" Margin="5"/>
+        </StackPanel>
+    </Grid>
+</Window>
