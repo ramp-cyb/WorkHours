@@ -158,23 +158,56 @@ namespace CybageMISAutomation.Services
         private static DateTime ParseDate(string raw)
         {
             if (string.IsNullOrWhiteSpace(raw)) return DateTime.MinValue;
+            
             string[] formats = { "dd-MMM-yyyy", "d-MMM-yyyy", "dd-MMM-yy", "d-MMM-yy", "dd-MM-yyyy", "d-MM-yyyy" };
-            if (DateTime.TryParseExact(raw.Trim(), formats, System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.None, out var dt)) return dt;
-            DateTime.TryParse(raw, out dt);
-            return dt;
+            
+            // Try exact parsing first with InvariantCulture
+            if (DateTime.TryParseExact(raw.Trim(), formats, 
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var dt))
+                return dt;
+            
+            // Use InvariantCulture for fallback parsing to ensure consistent behavior across locales
+            if (DateTime.TryParse(raw.Trim(), System.Globalization.CultureInfo.InvariantCulture, 
+                System.Globalization.DateTimeStyles.None, out dt))
+                return dt;
+            
+            // Log parsing failure for debugging
+            System.Diagnostics.Debug.WriteLine($"Failed to parse date: {raw}");
+            return DateTime.MinValue;
         }
 
         private static double ParseHoursToDecimal(string h)
         {
             if (string.IsNullOrWhiteSpace(h)) return 0;
+            
             var parts = h.Split(':');
-            if (parts.Length != 2) return 0;
-            if (int.TryParse(parts[0], out int hh) && int.TryParse(parts[1], out int mm))
+            if (parts.Length != 2) 
             {
-                return hh + (mm / 60.0);
+                System.Diagnostics.Debug.WriteLine($"Invalid time format (expected HH:MM): {h}");
+                return 0;
             }
-            return 0;
+            
+            if (!int.TryParse(parts[0], out int hours) || !int.TryParse(parts[1], out int minutes))
+            {
+                System.Diagnostics.Debug.WriteLine($"Invalid time values (non-numeric): {h}");
+                return 0;
+            }
+            
+            // Validate ranges - hours can be > 24 for overtime scenarios, but should be reasonable
+            if (hours < 0 || hours > 48) // Allow up to 48 hours for extreme overtime cases
+            {
+                System.Diagnostics.Debug.WriteLine($"Hours out of reasonable range (0-48): {hours}");
+                return 0;
+            }
+            
+            if (minutes < 0 || minutes >= 60)
+            {
+                System.Diagnostics.Debug.WriteLine($"Minutes out of range (0-59): {minutes}");
+                return 0;
+            }
+            
+            return hours + (minutes / 60.0);
         }
 
         private static bool IsWeekend(DateTime dt) => dt.DayOfWeek == DayOfWeek.Saturday || dt.DayOfWeek == DayOfWeek.Sunday;
