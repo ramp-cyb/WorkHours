@@ -2153,19 +2153,25 @@ namespace CybageMISAutomation
                 UpdateStatus("Setting date range for current month...", 60);
                 LogMessage("Starting date range configuration...");
 
-                // Set date range to 1st of current month
+                // Set date range to current month (1st to last day)
                 var firstOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-                var dateString = firstOfMonth.ToString("dd-MMM-yyyy");
-                LogMessage($"Setting start date to: {dateString}");
+                var lastOfMonth = firstOfMonth.AddMonths(1).AddDays(-1);
+                var startDateString = firstOfMonth.ToString("dd-MMM-yyyy");
+                var endDateString = lastOfMonth.ToString("dd-MMM-yyyy");
+                LogMessage($"Setting date range: {startDateString} to {endDateString}");
 
-                // Step 1: Find and verify the date input exists
+                // Step 1: Find and verify both date inputs exist
                 var dateInputResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
                     (function() {
                         try {
-                            // Try multiple common selectors for from date input
-                            var fromDateInput = document.querySelector('input[name*=""FromDate""], input[id*=""FromDate""], input[name*=""StartDate""], input[id*=""StartDate""]') ||
-                                              document.querySelector('input[type=""text""][name*=""Date""], input[type=""date""]') ||
-                                              document.querySelector('input[placeholder*=""Date""], input[title*=""Date""]');
+                            // Use specific input name for monthly date range
+                            var fromDateInput = document.querySelector('input[name=""DMNDateDateRangeControl4392_FromDateCalender_DTB""]') ||
+                                              document.querySelector('input[name*=""FromDateCalender""], input[name*=""FromDate""]') ||
+                                              document.querySelector('input[type=""text""][name*=""Date""]');
+                            
+                            // Also find to date input
+                            var toDateInput = document.querySelector('input[name*=""ToDateCalender""], input[name*=""ToDate""]') ||
+                                            document.querySelectorAll('input[type=""text""][name*=""Date""]')[1];
                             
                             if (!fromDateInput) {
                                 // Debug - show available date-related inputs
@@ -2185,13 +2191,24 @@ namespace CybageMISAutomation
 
                             return JSON.stringify({
                                 success: true,
-                                id: fromDateInput.id || 'no-id',
-                                name: fromDateInput.name || 'no-name',
-                                type: fromDateInput.type,
-                                placeholder: fromDateInput.placeholder || 'no-placeholder',
-                                currentValue: fromDateInput.value || 'empty',
-                                readOnly: fromDateInput.readOnly,
-                                disabled: fromDateInput.disabled
+                                fromDate: {
+                                    id: fromDateInput.id || 'no-id',
+                                    name: fromDateInput.name || 'no-name',
+                                    type: fromDateInput.type,
+                                    placeholder: fromDateInput.placeholder || 'no-placeholder',
+                                    currentValue: fromDateInput.value || 'empty',
+                                    readOnly: fromDateInput.readOnly,
+                                    disabled: fromDateInput.disabled
+                                },
+                                toDate: toDateInput ? {
+                                    id: toDateInput.id || 'no-id',
+                                    name: toDateInput.name || 'no-name',
+                                    type: toDateInput.type,
+                                    placeholder: toDateInput.placeholder || 'no-placeholder',
+                                    currentValue: toDateInput.value || 'empty',
+                                    readOnly: toDateInput.readOnly,
+                                    disabled: toDateInput.disabled
+                                } : null
                             });
                         } catch (ex) {
                             return JSON.stringify({success: false, error: 'Date input error'});
@@ -2216,44 +2233,77 @@ namespace CybageMISAutomation
                     throw new Exception($"Date input not found: {dateInputInfo.error}");
                 }
 
-                LogMessage($"✓ Date input found: ID='{dateInputInfo.id}', Name='{dateInputInfo.name}', Type='{dateInputInfo.type}'");
-                LogMessage($"  Current value: '{dateInputInfo.currentValue}', ReadOnly: {dateInputInfo.readOnly}, Disabled: {dateInputInfo.disabled}");
+                LogMessage($"✓ From Date input found: ID='{dateInputInfo.fromDate.id}', Name='{dateInputInfo.fromDate.name}', Type='{dateInputInfo.fromDate.type}'");
+                LogMessage($"  Current value: '{dateInputInfo.fromDate.currentValue}', ReadOnly: {dateInputInfo.fromDate.readOnly}, Disabled: {dateInputInfo.fromDate.disabled}");
+                
+                if (dateInputInfo.toDate != null)
+                {
+                    LogMessage($"✓ To Date input found: ID='{dateInputInfo.toDate.id}', Name='{dateInputInfo.toDate.name}', Type='{dateInputInfo.toDate.type}'");
+                    LogMessage($"  Current value: '{dateInputInfo.toDate.currentValue}', ReadOnly: {dateInputInfo.toDate.readOnly}, Disabled: {dateInputInfo.toDate.disabled}");
+                }
+                else
+                {
+                    LogMessage("⚠️ To Date input not found - will only set From Date");
+                }
 
-                // Step 2: Set the date value
+                // Step 2: Set both date values
                 var setDateResult = await webView.CoreWebView2.ExecuteScriptAsync($@"
                     (function() {{
                         try {{
-                            var fromDateInput = document.querySelector('input[name*=""FromDate""], input[id*=""FromDate""], input[name*=""StartDate""], input[id*=""StartDate""]') ||
-                                              document.querySelector('input[type=""text""][name*=""Date""], input[type=""date""]') ||
-                                              document.querySelector('input[placeholder*=""Date""], input[title*=""Date""]');
+                            var fromDateInput = document.querySelector('input[name=""DMNDateDateRangeControl4392_FromDateCalender_DTB""]') ||
+                                              document.querySelector('input[name*=""FromDateCalender""], input[name*=""FromDate""]') ||
+                                              document.querySelector('input[type=""text""][name*=""Date""]');
+                            
+                            var toDateInput = document.querySelector('input[name*=""ToDateCalender""], input[name*=""ToDate""]') ||
+                                            document.querySelectorAll('input[type=""text""][name*=""Date""]')[1];
                             
                             if (!fromDateInput) {{
                                 return JSON.stringify({{success: false, error: 'Date input disappeared'}});
                             }}
 
-                            var oldValue = fromDateInput.value;
-                            var targetDate = '{dateString}';
+                            var fromOldValue = fromDateInput.value;
+                            var toOldValue = toDateInput ? toDateInput.value : 'N/A';
+                            var startDate = '{startDateString}';
+                            var endDate = '{endDateString}';
                             
-                            // Set the date value
-                            fromDateInput.value = targetDate;
+                            // Set the from date value
+                            fromDateInput.value = startDate;
                             
-                            // Trigger multiple events to ensure any JavaScript handlers are called
+                            // Trigger events for from date
                             var inputEvent = new Event('input', {{ bubbles: true }});
                             fromDateInput.dispatchEvent(inputEvent);
                             
                             var changeEvent = new Event('change', {{ bubbles: true }});
                             fromDateInput.dispatchEvent(changeEvent);
                             
+                            // Set the to date if available
+                            var toDateSet = false;
+                            if (toDateInput) {{
+                                toDateInput.value = endDate;
+                                toDateInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                toDateInput.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                                toDateInput.dispatchEvent(new Event('blur', {{ bubbles: true }}));
+                                toDateSet = true;
+                            }}
+                            
                             var blurEvent = new Event('blur', {{ bubbles: true }});
                             fromDateInput.dispatchEvent(blurEvent);
 
                             return JSON.stringify({{
                                 success: true,
-                                oldValue: oldValue,
-                                targetDate: targetDate,
-                                newValue: fromDateInput.value,
-                                valueChanged: oldValue !== fromDateInput.value,
-                                message: 'Date value set successfully'
+                                fromDate: {{
+                                    oldValue: fromOldValue,
+                                    targetDate: startDate,
+                                    newValue: fromDateInput.value,
+                                    valueChanged: fromOldValue !== fromDateInput.value
+                                }},
+                                toDate: toDateSet ? {{
+                                    oldValue: toOldValue,
+                                    targetDate: endDate,
+                                    newValue: toDateInput.value,
+                                    valueChanged: toOldValue !== toDateInput.value
+                                }} : null,
+                                message: 'Date values set successfully'
                             }});
                         }} catch (ex) {{
                             return JSON.stringify({{success: false, error: 'Date setting error'}});
@@ -2270,8 +2320,14 @@ namespace CybageMISAutomation
                     throw new Exception($"Date setting failed: {setDateInfo.error}");
                 }
 
-                LogMessage($"✓ Date set successfully: '{setDateInfo.oldValue}' → '{setDateInfo.newValue}'");
-                LogMessage($"  Value changed: {setDateInfo.valueChanged}, Target: '{setDateInfo.targetDate}'");
+                LogMessage($"✓ From Date set: '{setDateInfo.fromDate.oldValue}' → '{setDateInfo.fromDate.newValue}'");
+                LogMessage($"  Value changed: {setDateInfo.fromDate.valueChanged}, Target: '{setDateInfo.fromDate.targetDate}'");
+                
+                if (setDateInfo.toDate != null)
+                {
+                    LogMessage($"✓ To Date set: '{setDateInfo.toDate.oldValue}' → '{setDateInfo.toDate.newValue}'");
+                    LogMessage($"  Value changed: {setDateInfo.toDate.valueChanged}, Target: '{setDateInfo.toDate.targetDate}'");
+                }
 
                 // Step 3: Verify the date value stuck by reading it back
                 await Task.Delay(500); // Brief pause to let change events complete
@@ -2279,9 +2335,9 @@ namespace CybageMISAutomation
                 var verificationResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
                     (function() {
                         try {
-                            var fromDateInput = document.querySelector('input[name*=""FromDate""], input[id*=""FromDate""], input[name*=""StartDate""], input[id*=""StartDate""]') ||
-                                              document.querySelector('input[type=""text""][name*=""Date""], input[type=""date""]') ||
-                                              document.querySelector('input[placeholder*=""Date""], input[title*=""Date""]');
+                            var fromDateInput = document.querySelector('input[name=""DMNDateDateRangeControl4392_FromDateCalender_DTB""]') ||
+                                              document.querySelector('input[name*=""FromDateCalender""], input[name*=""FromDate""]') ||
+                                              document.querySelector('input[type=""text""][name*=""Date""]');
                             
                             if (!fromDateInput) {
                                 return JSON.stringify({success: false, error: 'Date input disappeared during verification'});
@@ -2306,13 +2362,13 @@ namespace CybageMISAutomation
                     LogMessage($"✓ Date setting verified: Current value = '{verificationInfo.currentValue}'");
                     
                     // Verify it matches our target date
-                    if (verificationInfo.currentValue.ToString() == dateString)
+                    if (verificationInfo.currentValue.ToString() == startDateString)
                     {
-                        LogMessage($"✓ Verified date matches target: {dateString}");
+                        LogMessage($"✓ Verified date matches target: {startDateString}");
                     }
                     else if (!(bool)verificationInfo.isEmpty)
                     {
-                        LogMessage($"⚠️ WARNING: Date value '{verificationInfo.currentValue}' does not exactly match target '{dateString}' but is not empty");
+                        LogMessage($"⚠️ WARNING: Date value '{verificationInfo.currentValue}' does not exactly match target '{startDateString}' but is not empty");
                     }
                     else
                     {
@@ -2540,113 +2596,198 @@ namespace CybageMISAutomation
         private async Task<List<MonthlyAttendanceEntry>> ParseMonthlyReportData()
         {
             var monthlyData = new List<MonthlyAttendanceEntry>();
+                        LogMessage("▶ Starting single-pass monthly extraction (oReportDiv-first heuristic)...");
 
-            string extractScript = @"
-                var data = [];
-                
-                // Look for the Microsoft Report Viewer table structure
-                var reportCell = document.querySelector('#P664e07e5557e4eee8c11978a02125623oReportCell');
-                if (!reportCell) {
-                    // Fallback to any ReportViewer1 table
-                    var reportViewer = document.querySelector('#ReportViewer1');
-                    if (reportViewer) {
-                        var tables = reportViewer.querySelectorAll('table');
-                        for (var t = 0; t < tables.length; t++) {
-                            var testRows = tables[t].querySelectorAll('tr');
-                            if (testRows.length > 3) {
-                                reportCell = tables[t];
-                                break;
-                            }
-                        }
-                    }
-                }
-                
-                if (reportCell) {
-                    var rows = reportCell.querySelectorAll('tr');
-                    var headerFound = false;
-                    
-                    for (var i = 0; i < rows.length; i++) {
-                        var cells = rows[i].querySelectorAll('td');
-                        if (cells.length < 14) continue; // Monthly report should have 14 columns
-                        
-                        // Check for header row - look for 'Employee ID' text
-                        var firstCellText = cells[0].textContent || cells[0].innerText || '';
-                        firstCellText = firstCellText.trim();
-                        
-                        if (firstCellText.toLowerCase().includes('employee') || firstCellText === 'Employee ID') {
-                            headerFound = true;
-                            continue;
-                        }
-                        
-                        // Skip empty rows
-                        if (!firstCellText || firstCellText === '') continue;
-                        
-                        // Look for employee ID (numeric pattern)
-                        if (headerFound && /^\d+$/.test(firstCellText)) {
-                            var employeeId = firstCellText;
-                            var employeeName = (cells[1].textContent || cells[1].innerText || '').trim();
-                            var date = (cells[2].textContent || cells[2].innerText || '').trim();
-                            var swipeCount = (cells[3].textContent || cells[3].innerText || '').trim();
-                            var inTime = (cells[4].textContent || cells[4].innerText || '').trim();
-                            var outTime = (cells[5].textContent || cells[5].innerText || '').trim();
-                            var totalHours = (cells[6].textContent || cells[6].innerText || '').trim();
-                            var actualWorkHours = (cells[7].textContent || cells[7].innerText || '').trim();
-                            var totalWorkingHours = (cells[11].textContent || cells[11].innerText || '').trim(); // Column 12: Actual Working Hours Swipe (A) + WFH (B) (HH:MM)
-                            var status = (cells[12].textContent || cells[12].innerText || '').trim(); // Column 13: Status
-                            
-                            var entry = {
-                                employeeId: employeeId,
-                                employeeName: employeeName,
-                                date: date,
-                                swipeCount: swipeCount || '0',
-                                inTime: inTime,
-                                outTime: outTime,
-                                totalHours: totalWorkingHours || totalHours || actualWorkHours,
-                                actualWorkHours: actualWorkHours,
-                                status: status
-                            };
-                            
-                            // Only add if we have valid data
-                            if (entry.employeeId && entry.employeeName && entry.date) {
-                                data.push(entry);
-                            }
-                        }
-                    }
-                }
-                
-                return JSON.stringify(data);";
+                                        var script = @"(function(){
+                    var dbg = []; function step(msg){ dbg.push(msg); }
+                    try {
+                        step('STEP 1: Begin');
+                        var rv = document.getElementById('ReportViewer1');
+                        if(!rv){ step('ReportViewer1 not found'); return {success:false, error:'ReportViewer1 not found', debug:dbg}; }
+                        step('STEP 2: ReportViewer1 located');
 
-            string result = await webView.CoreWebView2.ExecuteScriptAsync(extractScript);
-            
-            try
-            {
-                var jsonData = result.Trim('"').Replace("\\\"", "\"");
-                var dataArray = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic[]>(jsonData);
-                
-                foreach (var item in dataArray)
-                {
-                    var entry = new MonthlyAttendanceEntry
-                    {
-                        EmployeeId = item.employeeId?.ToString() ?? "",
-                        EmployeeName = item.employeeName?.ToString() ?? "",
-                        Date = item.date?.ToString() ?? "",
-                        SwipeCount = int.TryParse(item.swipeCount?.ToString(), out int count) ? count : 0,
-                        InTime = item.inTime?.ToString() ?? "",
-                        OutTime = item.outTime?.ToString() ?? "",
-                        TotalHours = item.totalHours?.ToString() ?? "",
-                        ActualWorkHours = item.actualWorkHours?.ToString() ?? "",
-                        Status = item.status?.ToString() ?? ""
-                    };
-                    
-                    monthlyData.Add(entry);
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error parsing monthly data: {ex.Message}");
-            }
+                 // STEP 3: Prefer div whose id ends with oReportDiv, then fallback to oReportCell
+                 var container = rv.querySelector('div[id$=oReportDiv]');
+                 if(container){ step('STEP 3: Found container via id$=oReportDiv: '+ container.id); }
+                 if(!container){ container = rv.querySelector('div[id$=oReportCell]'); if(container) step('STEP 3: Fallback container via id$=oReportCell: '+container.id); }
+                 // If still not found try broader contains match inside main doc
+                 if(!container){ var c2 = rv.querySelector('div[id*=oReportDiv]'); if(c2){ container = c2; step('STEP 3: Contains match oReportDiv: '+container.id);} }
+                 if(!container){ var c3 = rv.querySelector('div[id*=oReportCell]'); if(c3){ container = c3; step('STEP 3: Contains match oReportCell: '+container.id);} }
 
-            return monthlyData;
+                 // STEP 4: If not found yet, attempt accessible iframes (single pass only)
+                 if(!container){
+                      var ifr = rv.querySelectorAll('iframe');
+                      step('STEP 4: Container not in main doc, scanning '+ifr.length+' iframe(s)');
+                      for(var i=0;i<ifr.length && !container;i++){
+                         try {
+                            var idoc = ifr[i].contentDocument || ifr[i].contentWindow.document;
+                            if(!idoc) continue;
+                            var cand = idoc.querySelector('div[id$=oReportDiv]') || idoc.querySelector('div[id$=oReportCell]') || idoc.querySelector('div[id*=oReportDiv]') || idoc.querySelector('div[id*=oReportCell]');
+                            if(cand){ container = cand; step('STEP 4: Found container inside iframe#'+(ifr[i].id||i)+': '+cand.id); }
+                         } catch(e){ step('STEP 4: iframe access blocked: '+ e.message); }
+                      }
+                 }
+
+                if(!container){ step('FAIL: No report container (oReportDiv / oReportCell) found'); return {success:false, error:'Report container not found', debug:dbg}; }
+
+                 // STEP 5: Collect tables within the chosen container
+                 var tables = Array.prototype.slice.call(container.querySelectorAll('table'));
+                 step('STEP 5: Tables inside container: '+ tables.length);
+                if(!tables.length){ return {success:false, error:'No tables in container', debug:dbg}; }
+
+                 // STEP 6: Score tables similar to daily logic
+                 function scoreTable(tb){
+                     var rows = tb.rows; if(!rows || rows.length < 2) return 0;
+                     var rowCount = rows.length;
+                     var numericIds = 0, timeCells = 0, dateCells=0, textCells=0, maxCols=0;
+                     var dateRegex = /\b\d{1,2}[\/-][A-Za-z]{3}[\/-]?\d{2,4}\b|\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/; /* keep double escapes here because we are inside C# verbatim? Actually we want JS to see \b for word boundary. */
+                     var timeRegex = /\b\d{1,2}:\d{2}\b/;
+                     for(var r=0; r<Math.min(rows.length, 60); r++){
+                        var cells = rows[r].cells; if(!cells) continue; if(cells.length>maxCols) maxCols=cells.length;
+                        for(var c=0;c<cells.length;c++){
+                          var txt = (cells[c].innerText||'').trim();
+                          if(/^\d{3,}$/.test(txt)) numericIds++;
+                          else if(timeRegex.test(txt)) timeCells++;
+                          else if(dateRegex.test(txt)) dateCells++;
+                          else if(txt) textCells++;
+                        }
+                     }
+                     return rowCount*3 + numericIds*2 + timeCells*2 + dateCells*3 + maxCols;
+                 }
+                 var scored = tables.map(function(t,i){ return {idx:i, score:scoreTable(t), rows:t.rows.length, el:t}; });
+                 scored.sort(function(a,b){ return b.score - a.score; });
+                 var best = scored[0];
+                 step('STEP 6: Best table index '+best.idx+' score='+best.score+' rows='+best.rows);
+                if(!best || best.score === 0){ return {success:false, error:'No suitable table (score=0)', debug:dbg}; }
+
+                 var table = best.el;
+
+                 // STEP 7: Detect header row (first 5 rows) looking for employee/date keywords
+                 var headerRowIndex = 0; var headerTexts=[];
+                 for(var hr=0; hr<Math.min(table.rows.length,5); hr++){
+                     var cells = table.rows[hr].cells; if(!cells || cells.length<3) continue;
+                     var texts=[]; for(var hc=0; hc<cells.length; hc++){ var t=(cells[hc].innerText||'').replace(/\s+/g,' ').trim().toLowerCase(); texts.push(t); }
+                     var joined = texts.join(' | ');
+                     if(/employee/.test(joined) && /(id|name)/.test(joined)) { headerRowIndex = hr; headerTexts=texts; step('STEP 7: Header row found at '+hr+' -> '+texts.join(' || ')); break; }
+                     if(hr===0){ headerTexts=texts; }
+                 }
+                if(!headerTexts.length){ return {success:false, error:'Header row not detected', debug:dbg}; }
+
+                 // STEP 8: Build column map (flexible)
+                 var map={};
+                 headerTexts.forEach(function(h,i){
+                     if(h.includes('employee') && h.includes('id')) map.empId=i;
+                     else if(h.includes('employee') && h.includes('name')) map.name=i;
+                     else if(h==='date' || h.includes('date')) map.date=i;
+                     else if(h.includes('in') && h.includes('time')) map.inTime=i;
+                     else if(h.includes('out') && h.includes('time')) map.outTime=i;
+                     else if(h.includes('total') && h.includes('hour')) map.total=i;
+                     else if(h.includes('actual') && h.includes('hour')) map.actual=i;
+                     else if(h.includes('status')) map.status=i;
+                 });
+                 step('STEP 8: Column map '+JSON.stringify(map));
+                 if(map.empId==null){
+                     for(var c=0; c<headerTexts.length && map.empId==null; c++){
+                         var numericHits=0; for(var rr=headerRowIndex+1; rr<Math.min(table.rows.length, headerRowIndex+15); rr++){ var cell=table.rows[rr].cells[c]; if(!cell) continue; var txt=(cell.innerText||'').trim(); if(/^\d{3,}$/.test(txt)) numericHits++; }
+                         if(numericHits>=3){ map.empId=c; step('Fallback empId column='+c+' hits='+numericHits); }
+                     }
+                 }
+                 if(map.name==null && map.empId!=null){
+                     if(map.empId+1 < headerTexts.length){ map.name=map.empId+1; step('Fallback name column chosen index '+map.name); }
+                 }
+                 if(map.date==null){
+                     var dateRegex2=/\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/;
+                     for(var c2=0; c2<headerTexts.length && map.date==null; c2++){
+                        for(var rr2=headerRowIndex+1; rr2<Math.min(table.rows.length, headerRowIndex+12); rr2++){
+                          var cell2=table.rows[rr2].cells[c2]; if(!cell2) continue; var tx=(cell2.innerText||'').trim(); if(dateRegex2.test(tx)){ map.date=c2; step('Fallback date column='+c2+' sample='+tx); break; }
+                        }
+                     }
+                 }
+                if(map.empId==null || map.name==null || map.date==null){ return {success:false, error:'Essential columns unresolved', debug:dbg, map:map}; }
+
+                 // STEP 9: Extract rows
+                 var results=[]; var totalRows=table.rows.length; step('STEP 9: Total table rows '+totalRows);
+                 for(var r=headerRowIndex+1; r<table.rows.length; r++){
+                     var row=table.rows[r]; var cells=row.cells; if(!cells || cells.length <= map.name) continue;
+                     var idTxt=(cells[map.empId].innerText||'').trim();
+                     if(!/^\d{3,}$/.test(idTxt)) continue;
+                     var entry={
+                         employeeId:idTxt,
+                         employeeName:(cells[map.name] && cells[map.name].innerText||'').trim(),
+                         date:(cells[map.date] && cells[map.date].innerText||'').trim(),
+                         inTime: map.inTime!=null ? (cells[map.inTime].innerText||'').trim() : '',
+                         outTime: map.outTime!=null ? (cells[map.outTime].innerText||'').trim() : '',
+                         totalHours: map.total!=null ? (cells[map.total].innerText||'').trim() : '',
+                         actualWorkHours: map.actual!=null ? (cells[map.actual].innerText||'').trim() : '',
+                         status: map.status!=null ? (cells[map.status].innerText||'').trim() : ''
+                     };
+                     results.push(entry);
+                     if(results.length>=800) break;
+                 }
+                 step('STEP 10: Extracted data rows '+results.length);
+                return {success:true, count:results.length, entries:results, debug:dbg};
+              } catch(e){
+                step('ERROR: '+e.message);
+                return {success:false, error:e.message, debug:dbg};
+              }
+            })();";
+
+                        string raw = await webView.CoreWebView2.ExecuteScriptAsync(script);
+                        if (string.IsNullOrWhiteSpace(raw) || raw == "null")
+                        {
+                                LogMessage("⚠ Extraction script returned null/empty (single-pass)");
+                                return monthlyData; // empty
+                        }
+                        // ExecuteScriptAsync returns JSON text of the returned JS value directly (we returned an object not a string)
+                        dynamic? parsed = null;
+                        try { parsed = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(raw); }
+                        catch (Exception ex)
+                        {
+                            LogMessage($"⚠ JSON parse failure (single-pass direct object): {ex.Message}");
+                            LogMessage($"RAW: {raw.Substring(0, Math.Min(raw.Length, 400))}");
+                            return monthlyData;
+                        }
+
+                        if (parsed?.debug != null)
+                        {
+                                LogMessage("=== JS DEBUG (single-pass) ===");
+                                foreach (var d in parsed.debug)
+                                {
+                                        LogMessage($"JS: {d}");
+                                }
+                                LogMessage("=== END JS DEBUG ===");
+                        }
+
+                        if (parsed?.success == true && parsed.entries != null)
+                        {
+                                foreach (var item in parsed.entries)
+                                {
+                                        monthlyData.Add(new MonthlyAttendanceEntry
+                                        {
+                                                EmployeeId = item.employeeId?.ToString() ?? string.Empty,
+                                                EmployeeName = item.employeeName?.ToString() ?? string.Empty,
+                                                Date = item.date?.ToString() ?? string.Empty,
+                                                InTime = item.inTime?.ToString() ?? string.Empty,
+                                                OutTime = item.outTime?.ToString() ?? string.Empty,
+                                                TotalHours = item.totalHours?.ToString() ?? string.Empty,
+                                                ActualWorkHours = item.actualWorkHours?.ToString() ?? string.Empty,
+                                                Status = item.status?.ToString() ?? string.Empty
+                                        });
+                                }
+                                LogMessage($"✅ Extracted {monthlyData.Count} monthly rows (single-pass)");
+                        }
+                        else
+                        {
+                                var err = parsed?.error != null ? parsed.error.ToString() : "Unknown failure";
+                                LogMessage($"⚠ Monthly extraction failed (single-pass) - {err}");
+                        }
+
+                        if (monthlyData.Count == 0)
+                        {
+                                LogMessage("⚠ No monthly data extracted (single-pass heuristic)");
+                        }
+
+                        return monthlyData;
         }
 
         #endregion
