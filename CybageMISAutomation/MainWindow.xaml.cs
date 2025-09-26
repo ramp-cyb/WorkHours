@@ -2673,17 +2673,26 @@ namespace CybageMISAutomation
                  }
                 if(!headerTexts.length){ return {success:false, error:'Header row not detected', debug:dbg}; }
 
-                 // STEP 8: Build column map (flexible)
+                 // STEP 8: Build column map (extended)
                  var map={};
                  headerTexts.forEach(function(h,i){
+                     var base = h.replace(/\s+/g,' ');
                      if(h.includes('employee') && h.includes('id')) map.empId=i;
                      else if(h.includes('employee') && h.includes('name')) map.name=i;
                      else if(h==='date' || h.includes('date')) map.date=i;
+                     else if(h.includes('swipe') && h.includes('count')) map.swipeCount=i;
                      else if(h.includes('in') && h.includes('time')) map.inTime=i;
                      else if(h.includes('out') && h.includes('time')) map.outTime=i;
-                     else if(h.includes('total') && h.includes('hour')) map.total=i;
-                     else if(h.includes('actual') && h.includes('hour')) map.actual=i;
-                     else if(h.includes('status')) map.status=i;
+                     else if(h.includes('total') && h.includes('working') && h.includes('swipe')) map.totalSwipe=i; // Total Working Hours - Swipes
+                     else if(h.includes('actual') && h.includes('working') && h.includes('swipe') && !h.includes('wfh') && !h.includes('+')) map.actualSwipe=i; // Actual Working Hours - Swipes (A)
+                     else if(h.includes('total') && h.includes('working') && h.includes('wfh')) map.totalWFH=i; // Total Working Hours - WFH (B)
+                     else if(h.includes('actual') && h.includes('working') && h.includes('wfh') && !h.includes('+')) map.actualWFH=i; // Actual Working Hours - WFH (B)
+                     else if(h.includes('actual') && h.includes('swipe') && h.includes('wfh') && h.includes('+')) map.actualCombined=i; // Combined actual (A)+(B)
+                     else if(h.includes('actual') && h.includes('hour') && !map.actualGeneric) map.actualGeneric=i; // fallback generic actual
+                     else if(h.includes('total') && h.includes('hour') && !map.totalGeneric) map.totalGeneric=i; // fallback generic total
+                     else if(h.includes('first') && h.includes('half') && h.includes('status')) map.firstHalfStatus=i;
+                     else if(h.includes('second') && h.includes('half') && h.includes('status')) map.secondHalfStatus=i;
+                     else if(h==='status' || (h.includes('status') && !map.status)) map.status=i;
                  });
                  step('STEP 8: Column map '+JSON.stringify(map));
                  if(map.empId==null){
@@ -2717,8 +2726,16 @@ namespace CybageMISAutomation
                          date:(cells[map.date] && cells[map.date].innerText||'').trim(),
                          inTime: map.inTime!=null ? (cells[map.inTime].innerText||'').trim() : '',
                          outTime: map.outTime!=null ? (cells[map.outTime].innerText||'').trim() : '',
-                         totalHours: map.total!=null ? (cells[map.total].innerText||'').trim() : '',
-                         actualWorkHours: map.actual!=null ? (cells[map.actual].innerText||'').trim() : '',
+                         swipeCount: map.swipeCount!=null ? (cells[map.swipeCount].innerText||'').trim() : '',
+                         totalSwipeHours: map.totalSwipe!=null ? (cells[map.totalSwipe].innerText||'').trim() : (map.totalGeneric!=null ? (cells[map.totalGeneric].innerText||'').trim():''),
+                         actualSwipeHours: map.actualSwipe!=null ? (cells[map.actualSwipe].innerText||'').trim() : (map.actualGeneric!=null ? (cells[map.actualGeneric].innerText||'').trim():''),
+                         totalWFHHours: map.totalWFH!=null ? (cells[map.totalWFH].innerText||'').trim() : '',
+                         actualWFHHours: map.actualWFH!=null ? (cells[map.actualWFH].innerText||'').trim() : '',
+                         actualCombinedHours: map.actualCombined!=null ? (cells[map.actualCombined].innerText||'').trim() : '',
+                         totalHours: map.totalSwipe!=null ? (cells[map.totalSwipe].innerText||'').trim() : (map.totalGeneric!=null ? (cells[map.totalGeneric].innerText||'').trim() : ''),
+                         actualWorkHours: map.actualCombined!=null ? (cells[map.actualCombined].innerText||'').trim() : (map.actualSwipe!=null ? (cells[map.actualSwipe].innerText||'').trim() : (map.actualGeneric!=null ? (cells[map.actualGeneric].innerText||'').trim():'')),
+                         firstHalfStatus: map.firstHalfStatus!=null ? (cells[map.firstHalfStatus].innerText||'').trim() : '',
+                         secondHalfStatus: map.secondHalfStatus!=null ? (cells[map.secondHalfStatus].innerText||'').trim() : '',
                          status: map.status!=null ? (cells[map.status].innerText||'').trim() : ''
                      };
                      results.push(entry);
@@ -2760,21 +2777,36 @@ namespace CybageMISAutomation
 
                         if (parsed?.success == true && parsed.entries != null)
                         {
-                                foreach (var item in parsed.entries)
+                            foreach (var item in parsed.entries)
+                            {
+                                // Defensive accessors
+                                string GetStr(dynamic obj, string name)
                                 {
-                                        monthlyData.Add(new MonthlyAttendanceEntry
-                                        {
-                                                EmployeeId = item.employeeId?.ToString() ?? string.Empty,
-                                                EmployeeName = item.employeeName?.ToString() ?? string.Empty,
-                                                Date = item.date?.ToString() ?? string.Empty,
-                                                InTime = item.inTime?.ToString() ?? string.Empty,
-                                                OutTime = item.outTime?.ToString() ?? string.Empty,
-                                                TotalHours = item.totalHours?.ToString() ?? string.Empty,
-                                                ActualWorkHours = item.actualWorkHours?.ToString() ?? string.Empty,
-                                                Status = item.status?.ToString() ?? string.Empty
-                                        });
+                                    try { var val = obj?[name]; return val == null ? string.Empty : val.ToString(); } catch { return string.Empty; }
                                 }
-                                LogMessage($"✅ Extracted {monthlyData.Count} monthly rows (single-pass)");
+
+                                int swipeCountInt = 0;
+                                var swipeText = GetStr(item, "swipeCount");
+                                if (!string.IsNullOrWhiteSpace(swipeText) && int.TryParse(new string(swipeText.Where(char.IsDigit).ToArray()), out var sc)) swipeCountInt = sc;
+
+                                monthlyData.Add(new MonthlyAttendanceEntry
+                                {
+                                    EmployeeId = GetStr(item, "employeeId"),
+                                    EmployeeName = GetStr(item, "employeeName"),
+                                    Date = GetStr(item, "date"),
+                                    SwipeCount = swipeCountInt,
+                                    InTime = GetStr(item, "inTime"),
+                                    OutTime = GetStr(item, "outTime"),
+                                    TotalHours = GetStr(item, "totalHours"),
+                                    ActualWorkHours = GetStr(item, "actualWorkHours"),
+                                    TotalWFHHours = GetStr(item, "totalWFHHours"),
+                                    ActualWFHHours = GetStr(item, "actualWFHHours"),
+                                    Status = GetStr(item, "status"),
+                                    FirstHalfStatus = GetStr(item, "firstHalfStatus"),
+                                    SecondHalfStatus = GetStr(item, "secondHalfStatus")
+                                });
+                            }
+                            LogMessage($"✅ Extracted {monthlyData.Count} monthly rows (single-pass, extended columns)");
                         }
                         else
                         {
