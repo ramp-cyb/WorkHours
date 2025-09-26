@@ -1870,7 +1870,7 @@ namespace CybageMISAutomation
                                 found: true,
                                 text: attendanceLogLink.textContent || attendanceLogLink.innerText,
                                 href: attendanceLogLink.getAttribute('href') || '',
-                                onclick: attendanceLogLink.getAttribute('onclick') || '',
+                                hasOnClick: !!attendanceLogLink.getAttribute('onclick'),
                                 visible: window.getComputedStyle(attendanceLogLink).display !== 'none'
                             });
                         }
@@ -1888,7 +1888,7 @@ namespace CybageMISAutomation
                 }
 
                 LogMessage($"✓ Attendance Log Report link verified: '{linkInfo.text}'");
-                LogMessage($"  OnClick: {linkInfo.onclick}");
+                LogMessage($"  HasOnClick: {linkInfo.hasOnClick}");
 
                 // Click the Attendance Log Report link (same pattern as swipe log)
                 var clickResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
@@ -1990,7 +1990,7 @@ namespace CybageMISAutomation
                                 currentText: employeeDropdown.options[employeeDropdown.selectedIndex].text
                             });
                         } catch (ex) {
-                            return JSON.stringify({success: false, error: ex.message});
+                            return JSON.stringify({success: false, error: 'Employee dropdown error'});
                         }
                     })()
                 ");
@@ -2073,7 +2073,7 @@ namespace CybageMISAutomation
                                 }});
                             }}
                         }} catch (ex) {{
-                            return JSON.stringify({{success: false, error: ex.message}});
+                            return JSON.stringify({{success: false, error: 'Employee selection error'}});
                         }}
                     }})()
                 ");
@@ -2194,7 +2194,7 @@ namespace CybageMISAutomation
                                 disabled: fromDateInput.disabled
                             });
                         } catch (ex) {
-                            return JSON.stringify({success: false, error: ex.message});
+                            return JSON.stringify({success: false, error: 'Date input error'});
                         }
                     })()
                 ");
@@ -2256,7 +2256,7 @@ namespace CybageMISAutomation
                                 message: 'Date value set successfully'
                             }});
                         }} catch (ex) {{
-                            return JSON.stringify({{success: false, error: ex.message}});
+                            return JSON.stringify({{success: false, error: 'Date setting error'}});
                         }}
                     }})()
                 ");
@@ -2293,7 +2293,7 @@ namespace CybageMISAutomation
                                 isEmpty: fromDateInput.value === '' || fromDateInput.value === null
                             });
                         } catch (ex) {
-                            return JSON.stringify({success: false, error: ex.message});
+                            return JSON.stringify({success: false, error: 'Date verification error'});
                         }
                     })()
                 ");
@@ -2361,7 +2361,7 @@ namespace CybageMISAutomation
                                         text: allButtons[i].textContent || allButtons[i].innerText || 'no-text',
                                         name: allButtons[i].name || 'no-name',
                                         id: allButtons[i].id || 'no-id',
-                                        onclick: allButtons[i].getAttribute('onclick') || 'no-onclick'
+                                        hasOnClick: !!allButtons[i].getAttribute('onclick')
                                     });
                                 }
                                 return JSON.stringify({success: false, error: 'Generate button not found', available: available});
@@ -2374,11 +2374,11 @@ namespace CybageMISAutomation
                                 text: generateBtn.textContent || generateBtn.innerText || 'no-text',
                                 name: generateBtn.name || 'no-name',
                                 id: generateBtn.id || 'no-id',
-                                onclick: generateBtn.getAttribute('onclick') || 'no-onclick',
+                                hasOnClick: !!generateBtn.getAttribute('onclick'),
                                 disabled: generateBtn.disabled
                             });
                         } catch (ex) {
-                            return JSON.stringify({success: false, error: ex.message});
+                            return JSON.stringify({success: false, error: 'Generate button find error'});
                         }
                     })()
                 ");
@@ -2394,16 +2394,14 @@ namespace CybageMISAutomation
                         LogMessage("Available buttons:");
                         foreach (var button in buttonInfo.available)
                         {
-                            LogMessage($"  - Type: '{button.type}', Value: '{button.value}', Text: '{button.text}', ID: '{button.id}', OnClick: '{button.onclick}'");
+                            LogMessage($"  - Type: '{button.type}', Value: '{button.value}', Text: '{button.text}', ID: '{button.id}', HasOnClick: {button.hasOnClick}");
                         }
                     }
                     throw new Exception($"Generate button not found: {buttonInfo.error}");
                 }
 
                 LogMessage($"✓ Generate button found: {buttonInfo.type} - '{buttonInfo.value}' (ID: '{buttonInfo.id}')");
-                LogMessage($"  Text: '{buttonInfo.text}', Disabled: {buttonInfo.disabled}, OnClick: '{buttonInfo.onclick}'");
-
-                // Step 2: Click the generate button
+                    LogMessage($"  Text: '{buttonInfo.text}', Disabled: {buttonInfo.disabled}, HasOnClick: {buttonInfo.hasOnClick}");                // Step 2: Click the generate button
                 var clickResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
                     (function() {
                         try {
@@ -2429,7 +2427,7 @@ namespace CybageMISAutomation
                                 message: 'Generate button clicked successfully'
                             });
                         } catch (ex) {
-                            return JSON.stringify({success: false, error: ex.message});
+                            return JSON.stringify({success: false, error: 'Generate button click error'});
                         }
                     })()
                 ");
@@ -2485,7 +2483,7 @@ namespace CybageMISAutomation
                                 }
                             });
                         } catch (ex) {
-                            return JSON.stringify({success: false, error: ex.message});
+                            return JSON.stringify({success: false, error: 'Report verification error'});
                         }
                     })()
                 ");
@@ -2544,37 +2542,72 @@ namespace CybageMISAutomation
             var monthlyData = new List<MonthlyAttendanceEntry>();
 
             string extractScript = @"
-                var reportTable = document.querySelector('#ReportViewer1 table, table[id*=""report""], .report table');
                 var data = [];
                 
-                if (reportTable) {
-                    var rows = reportTable.querySelectorAll('tr');
+                // Look for the Microsoft Report Viewer table structure
+                var reportCell = document.querySelector('#P664e07e5557e4eee8c11978a02125623oReportCell');
+                if (!reportCell) {
+                    // Fallback to any ReportViewer1 table
+                    var reportViewer = document.querySelector('#ReportViewer1');
+                    if (reportViewer) {
+                        var tables = reportViewer.querySelectorAll('table');
+                        for (var t = 0; t < tables.length; t++) {
+                            var testRows = tables[t].querySelectorAll('tr');
+                            if (testRows.length > 3) {
+                                reportCell = tables[t];
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                if (reportCell) {
+                    var rows = reportCell.querySelectorAll('tr');
                     var headerFound = false;
                     
                     for (var i = 0; i < rows.length; i++) {
-                        var cells = rows[i].querySelectorAll('td, th');
-                        if (cells.length > 10 && !headerFound) {
-                            // This might be header row, skip it
+                        var cells = rows[i].querySelectorAll('td');
+                        if (cells.length < 14) continue; // Monthly report should have 14 columns
+                        
+                        // Check for header row - look for 'Employee ID' text
+                        var firstCellText = cells[0].textContent || cells[0].innerText || '';
+                        firstCellText = firstCellText.trim();
+                        
+                        if (firstCellText.toLowerCase().includes('employee') || firstCellText === 'Employee ID') {
                             headerFound = true;
                             continue;
                         }
                         
-                        if (cells.length > 10 && headerFound) {
-                            // Data row - extract the columns we need
+                        // Skip empty rows
+                        if (!firstCellText || firstCellText === '') continue;
+                        
+                        // Look for employee ID (numeric pattern)
+                        if (headerFound && /^\d+$/.test(firstCellText)) {
+                            var employeeId = firstCellText;
+                            var employeeName = (cells[1].textContent || cells[1].innerText || '').trim();
+                            var date = (cells[2].textContent || cells[2].innerText || '').trim();
+                            var swipeCount = (cells[3].textContent || cells[3].innerText || '').trim();
+                            var inTime = (cells[4].textContent || cells[4].innerText || '').trim();
+                            var outTime = (cells[5].textContent || cells[5].innerText || '').trim();
+                            var totalHours = (cells[6].textContent || cells[6].innerText || '').trim();
+                            var actualWorkHours = (cells[7].textContent || cells[7].innerText || '').trim();
+                            var totalWorkingHours = (cells[11].textContent || cells[11].innerText || '').trim(); // Column 12: Actual Working Hours Swipe (A) + WFH (B) (HH:MM)
+                            var status = (cells[12].textContent || cells[12].innerText || '').trim(); // Column 13: Status
+                            
                             var entry = {
-                                employeeId: cells[0] ? cells[0].textContent.trim() : '',
-                                employeeName: cells[1] ? cells[1].textContent.trim() : '',
-                                date: cells[2] ? cells[2].textContent.trim() : '',
-                                swipeCount: cells[3] ? cells[3].textContent.trim() : '0',
-                                inTime: cells[4] ? cells[4].textContent.trim() : '',
-                                outTime: cells[5] ? cells[5].textContent.trim() : '',
-                                totalHours: cells[6] ? cells[6].textContent.trim() : '',
-                                actualWorkHours: cells[10] ? cells[10].textContent.trim() : '', // Column 11: Actual Working Hours Swipe (A) + WFH (B)
-                                status: cells[11] ? cells[11].textContent.trim() : ''
+                                employeeId: employeeId,
+                                employeeName: employeeName,
+                                date: date,
+                                swipeCount: swipeCount || '0',
+                                inTime: inTime,
+                                outTime: outTime,
+                                totalHours: totalWorkingHours || totalHours || actualWorkHours,
+                                actualWorkHours: actualWorkHours,
+                                status: status
                             };
                             
-                            // Only add if we have valid employee ID
-                            if (entry.employeeId && entry.employeeId !== '' && entry.date && entry.date !== '') {
+                            // Only add if we have valid data
+                            if (entry.employeeId && entry.employeeName && entry.date) {
                                 data.push(entry);
                             }
                         }
