@@ -1940,71 +1940,603 @@ namespace CybageMISAutomation
 
         private async Task SelectEmployeeInAttendanceReport()
         {
-            // Select employee by employee ID (find employee where ID matches as substring)
-            string selectEmployeeScript = $@"
-                var employeeDropdown = document.querySelector('select[name*=""Employee""], select[id*=""Employee""], select[id*=""employee""]');
-                if (employeeDropdown) {{
-                    var targetId = '{txtEmployeeId.Text}';
-                    var found = false;
-                    
-                    for (var i = 0; i < employeeDropdown.options.length; i++) {{
-                        var option = employeeDropdown.options[i];
-                        if (option.text.includes(targetId) || option.value.includes(targetId)) {{
-                            employeeDropdown.selectedIndex = i;
-                            found = true;
-                            break;
-                        }}
-                    }}
-                    
-                    if (found) {{
-                        employeeDropdown.dispatchEvent(new Event('change'));
-                        return 'Employee selected: ' + employeeDropdown.options[employeeDropdown.selectedIndex].text;
-                    }} else {{
-                        return 'Employee not found with ID: ' + targetId;
-                    }}
-                }} else {{
-                    return 'Employee dropdown not found';
-                }}";
+            try
+            {
+                UpdateStatus("Selecting employee in attendance report...", 50);
+                LogMessage("Starting employee selection process...");
 
-            string result = await webView.CoreWebView2.ExecuteScriptAsync(selectEmployeeScript);
-            LogMessage($"Employee selection result: {result}");
+                var targetEmployeeId = txtEmployeeId.Text;
+                LogMessage($"Looking for employee with ID: {targetEmployeeId}");
+
+                // Step 1: Find and verify the employee dropdown exists
+                var dropdownResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
+                    (function() {
+                        try {
+                            // Try multiple common selectors for employee dropdown
+                            var employeeDropdown = document.querySelector('select[name*=""Employee""], select[id*=""Employee""], select[id*=""employee""], select[name*=""EMP""]') ||
+                                                 document.getElementById('EmployeeDropDownList') ||
+                                                 document.querySelector('select:has(option[value*=""EMP""])');
+                            
+                            if (!employeeDropdown) {
+                                // Debug - show available dropdowns
+                                var allSelects = document.querySelectorAll('select');
+                                var available = [];
+                                for (var i = 0; i < Math.min(allSelects.length, 5); i++) {
+                                    available.push({
+                                        id: allSelects[i].id || 'no-id',
+                                        name: allSelects[i].name || 'no-name',
+                                        optionCount: allSelects[i].options.length
+                                    });
+                                }
+                                return JSON.stringify({success: false, error: 'Employee dropdown not found', available: available});
+                            }
+
+                            // Get dropdown info and sample options
+                            var options = [];
+                            for (var i = 0; i < Math.min(employeeDropdown.options.length, 10); i++) {
+                                options.push({
+                                    value: employeeDropdown.options[i].value,
+                                    text: employeeDropdown.options[i].text
+                                });
+                            }
+
+                            return JSON.stringify({
+                                success: true,
+                                id: employeeDropdown.id || 'no-id',
+                                name: employeeDropdown.name || 'no-name', 
+                                optionCount: employeeDropdown.options.length,
+                                sampleOptions: options,
+                                currentValue: employeeDropdown.value,
+                                currentText: employeeDropdown.options[employeeDropdown.selectedIndex].text
+                            });
+                        } catch (ex) {
+                            return JSON.stringify({success: false, error: ex.message});
+                        }
+                    })()
+                ");
+
+                var dropdownInfo = JsonConvert.DeserializeObject<dynamic>(
+                    dropdownResult.Trim('"').Replace("\\\"", "\""));
+
+                if (!(bool)dropdownInfo.success)
+                {
+                    LogMessage($"ERROR finding employee dropdown: {dropdownInfo.error}");
+                    if (dropdownInfo.available != null)
+                    {
+                        LogMessage("Available dropdowns:");
+                        foreach (var dropdown in dropdownInfo.available)
+                        {
+                            LogMessage($"  - ID: {dropdown.id}, Name: {dropdown.name}, Options: {dropdown.optionCount}");
+                        }
+                    }
+                    throw new Exception($"Employee dropdown not found: {dropdownInfo.error}");
+                }
+
+                LogMessage($"✓ Employee dropdown found: ID='{dropdownInfo.id}', Name='{dropdownInfo.name}', Options={dropdownInfo.optionCount}");
+                LogMessage($"  Current selection: '{dropdownInfo.currentText}' (Value: {dropdownInfo.currentValue})");
+                LogMessage("Sample options:");
+                foreach (var option in dropdownInfo.sampleOptions)
+                {
+                    LogMessage($"  - Value: '{option.value}', Text: '{option.text}'");
+                }
+
+                // Step 2: Select the employee by ID match
+                var selectionResult = await webView.CoreWebView2.ExecuteScriptAsync($@"
+                    (function() {{
+                        try {{
+                            var employeeDropdown = document.querySelector('select[name*=""Employee""], select[id*=""Employee""], select[id*=""employee""], select[name*=""EMP""]') ||
+                                                 document.getElementById('EmployeeDropDownList') ||
+                                                 document.querySelector('select:has(option[value*=""EMP""])');
+                            
+                            if (!employeeDropdown) {{
+                                return JSON.stringify({{success: false, error: 'Employee dropdown disappeared'}});
+                            }}
+
+                            var targetId = '{targetEmployeeId}';
+                            var found = false;
+                            var selectedOption = null;
+                            var previousIndex = employeeDropdown.selectedIndex;
+                            
+                            // Search through all options for ID match (as substring)
+                            for (var i = 0; i < employeeDropdown.options.length; i++) {{
+                                var option = employeeDropdown.options[i];
+                                if (option.text.includes(targetId) || option.value.includes(targetId)) {{
+                                    employeeDropdown.selectedIndex = i;
+                                    selectedOption = {{
+                                        value: option.value,
+                                        text: option.text,
+                                        index: i
+                                    }};
+                                    found = true;
+                                    break;
+                                }}
+                            }}
+                            
+                            if (found) {{
+                                // Trigger change event
+                                var changeEvent = new Event('change', {{ bubbles: true }});
+                                employeeDropdown.dispatchEvent(changeEvent);
+                                
+                                return JSON.stringify({{
+                                    success: true,
+                                    selectedOption: selectedOption,
+                                    previousIndex: previousIndex,
+                                    selectionChanged: previousIndex !== selectedOption.index,
+                                    message: 'Employee selected successfully'
+                                }});
+                            }} else {{
+                                return JSON.stringify({{
+                                    success: false, 
+                                    error: 'Employee not found with ID: ' + targetId,
+                                    searchedId: targetId,
+                                    totalOptions: employeeDropdown.options.length
+                                }});
+                            }}
+                        }} catch (ex) {{
+                            return JSON.stringify({{success: false, error: ex.message}});
+                        }}
+                    }})()
+                ");
+
+                var selectionInfo = JsonConvert.DeserializeObject<dynamic>(
+                    selectionResult.Trim('"').Replace("\\\"", "\""));
+
+                if (!(bool)selectionInfo.success)
+                {
+                    LogMessage($"ERROR selecting employee: {selectionInfo.error}");
+                    throw new Exception($"Employee selection failed: {selectionInfo.error}");
+                }
+
+                LogMessage($"✓ Employee selected successfully: '{selectionInfo.selectedOption.text}' (Index: {selectionInfo.selectedOption.index})");
+                LogMessage($"  Selection changed: {selectionInfo.selectionChanged} (Previous index: {selectionInfo.previousIndex})");
+
+                // Step 3: Verify the selection stuck by reading it back
+                await Task.Delay(500); // Brief pause to let change events complete
+
+                var verificationResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
+                    (function() {
+                        try {
+                            var employeeDropdown = document.querySelector('select[name*=""Employee""], select[id*=""Employee""], select[id*=""employee""], select[name*=""EMP""]') ||
+                                                 document.getElementById('EmployeeDropDownList') ||
+                                                 document.querySelector('select:has(option[value*=""EMP""])');
+                            
+                            if (!employeeDropdown) {
+                                return JSON.stringify({success: false, error: 'Employee dropdown disappeared during verification'});
+                            }
+
+                            return JSON.stringify({
+                                success: true,
+                                currentIndex: employeeDropdown.selectedIndex,
+                                currentValue: employeeDropdown.value,
+                                currentText: employeeDropdown.options[employeeDropdown.selectedIndex].text
+                            });
+                        } catch (ex) {
+                            return JSON.stringify({success: false, error: ex.message});
+                        }
+                    })()
+                ");
+
+                var verificationInfo = JsonConvert.DeserializeObject<dynamic>(
+                    verificationResult.Trim('"').Replace("\\\"", "\""));
+
+                if ((bool)verificationInfo.success)
+                {
+                    LogMessage($"✓ Employee selection verified: '{verificationInfo.currentText}' (Index: {verificationInfo.currentIndex})");
+                    
+                    // Verify it contains our target ID
+                    if (verificationInfo.currentText.ToString().Contains(targetEmployeeId))
+                    {
+                        LogMessage($"✓ Verified selection contains target employee ID: {targetEmployeeId}");
+                    }
+                    else
+                    {
+                        LogMessage($"⚠️ WARNING: Selected employee '{verificationInfo.currentText}' does not contain ID '{targetEmployeeId}'");
+                    }
+                }
+                else
+                {
+                    LogMessage($"ERROR verifying employee selection: {verificationInfo.error}");
+                    throw new Exception($"Employee selection verification failed: {verificationInfo.error}");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"ERROR: Employee selection failed - {ex.Message}");
+                throw;
+            }
         }
 
         private async Task SetMonthlyDateRange()
         {
-            // Set date range to 1st of current month
-            var firstOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-            var dateString = firstOfMonth.ToString("dd-MMM-yyyy");
+            try
+            {
+                UpdateStatus("Setting date range for current month...", 60);
+                LogMessage("Starting date range configuration...");
 
-            string setDateScript = $@"
-                var fromDateInput = document.querySelector('input[name*=""FromDate""], input[id*=""FromDate""]');
-                if (fromDateInput) {{
-                    fromDateInput.value = '{dateString}';
-                    fromDateInput.dispatchEvent(new Event('change'));
-                    return 'Date set to: {dateString}';
-                }} else {{
-                    return 'From date input not found';
-                }}";
+                // Set date range to 1st of current month
+                var firstOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                var dateString = firstOfMonth.ToString("dd-MMM-yyyy");
+                LogMessage($"Setting start date to: {dateString}");
 
-            string result = await webView.CoreWebView2.ExecuteScriptAsync(setDateScript);
-            LogMessage($"Date range result: {result}");
+                // Step 1: Find and verify the date input exists
+                var dateInputResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
+                    (function() {
+                        try {
+                            // Try multiple common selectors for from date input
+                            var fromDateInput = document.querySelector('input[name*=""FromDate""], input[id*=""FromDate""], input[name*=""StartDate""], input[id*=""StartDate""]') ||
+                                              document.querySelector('input[type=""text""][name*=""Date""], input[type=""date""]') ||
+                                              document.querySelector('input[placeholder*=""Date""], input[title*=""Date""]');
+                            
+                            if (!fromDateInput) {
+                                // Debug - show available date-related inputs
+                                var allInputs = document.querySelectorAll('input[type=""text""], input[type=""date""]');
+                                var available = [];
+                                for (var i = 0; i < Math.min(allInputs.length, 8); i++) {
+                                    available.push({
+                                        id: allInputs[i].id || 'no-id',
+                                        name: allInputs[i].name || 'no-name',
+                                        placeholder: allInputs[i].placeholder || 'no-placeholder',
+                                        title: allInputs[i].title || 'no-title',
+                                        value: allInputs[i].value || 'no-value'
+                                    });
+                                }
+                                return JSON.stringify({success: false, error: 'From date input not found', available: available});
+                            }
+
+                            return JSON.stringify({
+                                success: true,
+                                id: fromDateInput.id || 'no-id',
+                                name: fromDateInput.name || 'no-name',
+                                type: fromDateInput.type,
+                                placeholder: fromDateInput.placeholder || 'no-placeholder',
+                                currentValue: fromDateInput.value || 'empty',
+                                readOnly: fromDateInput.readOnly,
+                                disabled: fromDateInput.disabled
+                            });
+                        } catch (ex) {
+                            return JSON.stringify({success: false, error: ex.message});
+                        }
+                    })()
+                ");
+
+                var dateInputInfo = JsonConvert.DeserializeObject<dynamic>(
+                    dateInputResult.Trim('"').Replace("\\\"", "\""));
+
+                if (!(bool)dateInputInfo.success)
+                {
+                    LogMessage($"ERROR finding date input: {dateInputInfo.error}");
+                    if (dateInputInfo.available != null)
+                    {
+                        LogMessage("Available input fields:");
+                        foreach (var input in dateInputInfo.available)
+                        {
+                            LogMessage($"  - ID: '{input.id}', Name: '{input.name}', Placeholder: '{input.placeholder}', Value: '{input.value}'");
+                        }
+                    }
+                    throw new Exception($"Date input not found: {dateInputInfo.error}");
+                }
+
+                LogMessage($"✓ Date input found: ID='{dateInputInfo.id}', Name='{dateInputInfo.name}', Type='{dateInputInfo.type}'");
+                LogMessage($"  Current value: '{dateInputInfo.currentValue}', ReadOnly: {dateInputInfo.readOnly}, Disabled: {dateInputInfo.disabled}");
+
+                // Step 2: Set the date value
+                var setDateResult = await webView.CoreWebView2.ExecuteScriptAsync($@"
+                    (function() {{
+                        try {{
+                            var fromDateInput = document.querySelector('input[name*=""FromDate""], input[id*=""FromDate""], input[name*=""StartDate""], input[id*=""StartDate""]') ||
+                                              document.querySelector('input[type=""text""][name*=""Date""], input[type=""date""]') ||
+                                              document.querySelector('input[placeholder*=""Date""], input[title*=""Date""]');
+                            
+                            if (!fromDateInput) {{
+                                return JSON.stringify({{success: false, error: 'Date input disappeared'}});
+                            }}
+
+                            var oldValue = fromDateInput.value;
+                            var targetDate = '{dateString}';
+                            
+                            // Set the date value
+                            fromDateInput.value = targetDate;
+                            
+                            // Trigger multiple events to ensure any JavaScript handlers are called
+                            var inputEvent = new Event('input', {{ bubbles: true }});
+                            fromDateInput.dispatchEvent(inputEvent);
+                            
+                            var changeEvent = new Event('change', {{ bubbles: true }});
+                            fromDateInput.dispatchEvent(changeEvent);
+                            
+                            var blurEvent = new Event('blur', {{ bubbles: true }});
+                            fromDateInput.dispatchEvent(blurEvent);
+
+                            return JSON.stringify({{
+                                success: true,
+                                oldValue: oldValue,
+                                targetDate: targetDate,
+                                newValue: fromDateInput.value,
+                                valueChanged: oldValue !== fromDateInput.value,
+                                message: 'Date value set successfully'
+                            }});
+                        }} catch (ex) {{
+                            return JSON.stringify({{success: false, error: ex.message}});
+                        }}
+                    }})()
+                ");
+
+                var setDateInfo = JsonConvert.DeserializeObject<dynamic>(
+                    setDateResult.Trim('"').Replace("\\\"", "\""));
+
+                if (!(bool)setDateInfo.success)
+                {
+                    LogMessage($"ERROR setting date: {setDateInfo.error}");
+                    throw new Exception($"Date setting failed: {setDateInfo.error}");
+                }
+
+                LogMessage($"✓ Date set successfully: '{setDateInfo.oldValue}' → '{setDateInfo.newValue}'");
+                LogMessage($"  Value changed: {setDateInfo.valueChanged}, Target: '{setDateInfo.targetDate}'");
+
+                // Step 3: Verify the date value stuck by reading it back
+                await Task.Delay(500); // Brief pause to let change events complete
+
+                var verificationResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
+                    (function() {
+                        try {
+                            var fromDateInput = document.querySelector('input[name*=""FromDate""], input[id*=""FromDate""], input[name*=""StartDate""], input[id*=""StartDate""]') ||
+                                              document.querySelector('input[type=""text""][name*=""Date""], input[type=""date""]') ||
+                                              document.querySelector('input[placeholder*=""Date""], input[title*=""Date""]');
+                            
+                            if (!fromDateInput) {
+                                return JSON.stringify({success: false, error: 'Date input disappeared during verification'});
+                            }
+
+                            return JSON.stringify({
+                                success: true,
+                                currentValue: fromDateInput.value,
+                                isEmpty: fromDateInput.value === '' || fromDateInput.value === null
+                            });
+                        } catch (ex) {
+                            return JSON.stringify({success: false, error: ex.message});
+                        }
+                    })()
+                ");
+
+                var verificationInfo = JsonConvert.DeserializeObject<dynamic>(
+                    verificationResult.Trim('"').Replace("\\\"", "\""));
+
+                if ((bool)verificationInfo.success)
+                {
+                    LogMessage($"✓ Date setting verified: Current value = '{verificationInfo.currentValue}'");
+                    
+                    // Verify it matches our target date
+                    if (verificationInfo.currentValue.ToString() == dateString)
+                    {
+                        LogMessage($"✓ Verified date matches target: {dateString}");
+                    }
+                    else if (!(bool)verificationInfo.isEmpty)
+                    {
+                        LogMessage($"⚠️ WARNING: Date value '{verificationInfo.currentValue}' does not exactly match target '{dateString}' but is not empty");
+                    }
+                    else
+                    {
+                        LogMessage($"❌ ERROR: Date input is empty after setting");
+                        throw new Exception("Date input is empty after setting");
+                    }
+                }
+                else
+                {
+                    LogMessage($"ERROR verifying date setting: {verificationInfo.error}");
+                    throw new Exception($"Date setting verification failed: {verificationInfo.error}");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"ERROR: Date range setting failed - {ex.Message}");
+                throw;
+            }
         }
 
         private async Task GenerateAttendanceReport()
         {
-            // Click generate report button
-            string generateScript = @"
-                var generateBtn = document.querySelector('input[name*=""ViewReport""], input[title*=""Generate""], input[value*=""Generate""]');
-                if (generateBtn) {
-                    generateBtn.click();
-                    return 'Generate button clicked';
-                } else {
-                    return 'Generate button not found';
-                }";
+            try
+            {
+                UpdateStatus("Generating attendance report...", 70);
+                LogMessage("Starting report generation process...");
 
-            string result = await webView.CoreWebView2.ExecuteScriptAsync(generateScript);
-            LogMessage($"Generate report result: {result}");
-            await WaitForPageLoad();
+                // Step 1: Find and verify the generate button exists
+                var buttonResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
+                    (function() {
+                        try {
+                            // Try multiple common selectors for generate button
+                            var generateBtn = document.querySelector('input[name*=""ViewReport""], input[title*=""Generate""], input[value*=""Generate""]') ||
+                                            document.querySelector('input[type=""submit""], input[type=""button""][onclick*=""Report""]') ||
+                                            document.querySelector('button[onclick*=""Report""], a[onclick*=""Report""]') ||
+                                            document.querySelector('input[value*=""View""], input[value*=""Show""]');
+                            
+                            if (!generateBtn) {
+                                // Debug - show available buttons and inputs
+                                var allButtons = document.querySelectorAll('input[type=""submit""], input[type=""button""], button');
+                                var available = [];
+                                for (var i = 0; i < Math.min(allButtons.length, 8); i++) {
+                                    available.push({
+                                        type: allButtons[i].type || allButtons[i].tagName,
+                                        value: allButtons[i].value || 'no-value',
+                                        text: allButtons[i].textContent || allButtons[i].innerText || 'no-text',
+                                        name: allButtons[i].name || 'no-name',
+                                        id: allButtons[i].id || 'no-id',
+                                        onclick: allButtons[i].getAttribute('onclick') || 'no-onclick'
+                                    });
+                                }
+                                return JSON.stringify({success: false, error: 'Generate button not found', available: available});
+                            }
+
+                            return JSON.stringify({
+                                success: true,
+                                type: generateBtn.type || generateBtn.tagName,
+                                value: generateBtn.value || 'no-value',
+                                text: generateBtn.textContent || generateBtn.innerText || 'no-text',
+                                name: generateBtn.name || 'no-name',
+                                id: generateBtn.id || 'no-id',
+                                onclick: generateBtn.getAttribute('onclick') || 'no-onclick',
+                                disabled: generateBtn.disabled
+                            });
+                        } catch (ex) {
+                            return JSON.stringify({success: false, error: ex.message});
+                        }
+                    })()
+                ");
+
+                var buttonInfo = JsonConvert.DeserializeObject<dynamic>(
+                    buttonResult.Trim('"').Replace("\\\"", "\""));
+
+                if (!(bool)buttonInfo.success)
+                {
+                    LogMessage($"ERROR finding generate button: {buttonInfo.error}");
+                    if (buttonInfo.available != null)
+                    {
+                        LogMessage("Available buttons:");
+                        foreach (var button in buttonInfo.available)
+                        {
+                            LogMessage($"  - Type: '{button.type}', Value: '{button.value}', Text: '{button.text}', ID: '{button.id}', OnClick: '{button.onclick}'");
+                        }
+                    }
+                    throw new Exception($"Generate button not found: {buttonInfo.error}");
+                }
+
+                LogMessage($"✓ Generate button found: {buttonInfo.type} - '{buttonInfo.value}' (ID: '{buttonInfo.id}')");
+                LogMessage($"  Text: '{buttonInfo.text}', Disabled: {buttonInfo.disabled}, OnClick: '{buttonInfo.onclick}'");
+
+                // Step 2: Click the generate button
+                var clickResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
+                    (function() {
+                        try {
+                            var generateBtn = document.querySelector('input[name*=""ViewReport""], input[title*=""Generate""], input[value*=""Generate""]') ||
+                                            document.querySelector('input[type=""submit""], input[type=""button""][onclick*=""Report""]') ||
+                                            document.querySelector('button[onclick*=""Report""], a[onclick*=""Report""]') ||
+                                            document.querySelector('input[value*=""View""], input[value*=""Show""]');
+                            
+                            if (!generateBtn) {
+                                return JSON.stringify({success: false, error: 'Generate button disappeared'});
+                            }
+
+                            if (generateBtn.disabled) {
+                                return JSON.stringify({success: false, error: 'Generate button is disabled'});
+                            }
+
+                            // Click the generate button
+                            generateBtn.click();
+
+                            return JSON.stringify({
+                                success: true,
+                                buttonClicked: generateBtn.value || generateBtn.textContent || generateBtn.innerText,
+                                message: 'Generate button clicked successfully'
+                            });
+                        } catch (ex) {
+                            return JSON.stringify({success: false, error: ex.message});
+                        }
+                    })()
+                ");
+
+                var clickInfo = JsonConvert.DeserializeObject<dynamic>(
+                    clickResult.Trim('"').Replace("\\\"", "\""));
+
+                if (!(bool)clickInfo.success)
+                {
+                    LogMessage($"ERROR clicking generate button: {clickInfo.error}");
+                    throw new Exception($"Generate button click failed: {clickInfo.error}");
+                }
+
+                LogMessage($"✓ Generate button clicked successfully: '{clickInfo.buttonClicked}'");
+                UpdateStatus("Waiting for report to generate...", 80);
+                
+                // Step 3: Wait for the report to load and verify it appeared
+                await Task.Delay(5000); // Wait for report generation
+
+                var reportVerificationResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
+                    (function() {
+                        try {
+                            // Look for common report indicators
+                            var reportTable = document.querySelector('#ReportViewer1 table, table[id*=""report""], .report table, table.ReportTable') ||
+                                            document.querySelector('table:has(td:contains(""Employee"")), table:has(th:contains(""Employee""))') ||
+                                            document.querySelector('div[id*=""Report""], div[class*=""report""]');
+                            
+                            var reportContent = document.querySelector('#ReportViewer1, div[id*=""Report""], iframe[src*=""Report""]');
+                            
+                            // Check for error messages
+                            var errorMsg = document.querySelector('.error, .Error, div:contains(""No Data""), div:contains(""Error"")');
+                            
+                            // Check page title or headers
+                            var pageTitle = document.title || '';
+                            var headers = document.querySelectorAll('h1, h2, h3');
+                            var headerTexts = [];
+                            for (var i = 0; i < Math.min(headers.length, 3); i++) {
+                                headerTexts.push(headers[i].textContent || headers[i].innerText);
+                            }
+
+                            return JSON.stringify({
+                                success: true,
+                                reportTableFound: !!reportTable,
+                                reportContentFound: !!reportContent,
+                                errorMessageFound: !!errorMsg,
+                                pageTitle: pageTitle,
+                                headerTexts: headerTexts,
+                                tableCount: document.querySelectorAll('table').length,
+                                reportIndicators: {
+                                    reportViewer: !!document.getElementById('ReportViewer1'),
+                                    reportDiv: !!document.querySelector('div[id*=""Report""]'),
+                                    reportClass: !!document.querySelector('.report, .Report')
+                                }
+                            });
+                        } catch (ex) {
+                            return JSON.stringify({success: false, error: ex.message});
+                        }
+                    })()
+                ");
+
+                var verificationInfo = JsonConvert.DeserializeObject<dynamic>(
+                    reportVerificationResult.Trim('"').Replace("\\\"", "\""));
+
+                if ((bool)verificationInfo.success)
+                {
+                    LogMessage($"✓ Report generation verification completed:");
+                    LogMessage($"  Page title: '{verificationInfo.pageTitle}'");
+                    LogMessage($"  Report table found: {verificationInfo.reportTableFound}");
+                    LogMessage($"  Report content found: {verificationInfo.reportContentFound}");
+                    LogMessage($"  Error message found: {verificationInfo.errorMessageFound}");
+                    LogMessage($"  Total tables on page: {verificationInfo.tableCount}");
+                    
+                    if (verificationInfo.headerTexts != null && ((Newtonsoft.Json.Linq.JArray)verificationInfo.headerTexts).Count > 0)
+                    {
+                        LogMessage("  Page headers:");
+                        foreach (var header in verificationInfo.headerTexts)
+                        {
+                            LogMessage($"    - {header}");
+                        }
+                    }
+
+                    if ((bool)verificationInfo.errorMessageFound)
+                    {
+                        LogMessage("⚠️ WARNING: Error message detected on page - report may not have generated properly");
+                    }
+                    else if ((bool)verificationInfo.reportTableFound || (bool)verificationInfo.reportContentFound)
+                    {
+                        LogMessage("✓ Report appears to have generated successfully");
+                    }
+                    else
+                    {
+                        LogMessage("⚠️ WARNING: No clear report content found - may need to wait longer or check different selectors");
+                    }
+                }
+                else
+                {
+                    LogMessage($"ERROR verifying report generation: {verificationInfo.error}");
+                    // Don't throw here as this is just verification - the report might still have generated
+                }
+
+                LogMessage("✓ Report generation process completed");
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"ERROR: Report generation failed - {ex.Message}");
+                throw;
+            }
         }
 
         private async Task<List<MonthlyAttendanceEntry>> ParseMonthlyReportData()

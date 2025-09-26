@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CybageMISAutomation")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3b5e4c59e91ac70f4e2c7a88b88344290abb993a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6590757e4fee97c0dfbde2d43344e73448263efe")]
 [assembly: System.Reflection.AssemblyProductAttribute("CybageMISAutomation")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CybageMISAutomation")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
