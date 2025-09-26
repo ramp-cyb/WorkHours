@@ -1,7 +1,11 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Collections.Generic;
+using System.Linq;
+using System;
 using CybageMISAutomation.Models;
+// Converter is in the same namespace
 
 namespace CybageMISAutomation
 {
@@ -55,9 +59,9 @@ namespace CybageMISAutomation
                     var headerPanel = new StackPanel { Orientation = Orientation.Horizontal };
                     var dayText = new TextBlock
                     {
-                        Text = day.Date.Day.ToString(),
+                        Text = day.Date.ToString("dd-MMM"),
                         FontWeight = FontWeights.Bold,
-                        FontSize = 18,
+                        FontSize = 22,
                         Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33))
                     };
                     headerPanel.Children.Add(dayText);
@@ -80,8 +84,8 @@ namespace CybageMISAutomation
                     var hoursText = new TextBlock
                     {
                         Text = day.Hours,
-                        FontSize = 24,
-                        FontWeight = FontWeights.SemiBold,
+                        FontSize = 18,
+                        FontWeight = FontWeights.Medium,
                         Foreground = new SolidColorBrush(Color.FromRgb(0x11, 0x11, 0x11)),
                         HorizontalAlignment = HorizontalAlignment.Center,
                         VerticalAlignment = VerticalAlignment.Center
@@ -100,6 +104,61 @@ namespace CybageMISAutomation
                 
                 border.Child = grid;
                 CalendarGrid.Children.Add(border);
+            }
+            
+            // Add weekly totals in column 7
+            for (int row = 1; row <= 6; row++)
+            {
+                var weekStart = (row - 1) * 7;
+                var weekEnd = Math.Min(weekStart + 7, allDays.Count);
+                
+                var weeklyTotal = 0.0;
+                var weeklyDays = 0;
+                
+                for (int i = weekStart; i < weekEnd; i++)
+                {
+                    if (i < allDays.Count && !allDays[i].IsPlaceholder && allDays[i].HoursDecimal > 0)
+                    {
+                        weeklyTotal += allDays[i].HoursDecimal;
+                        weeklyDays++;
+                    }
+                }
+                
+                var weeklyBorder = new Border();
+                weeklyBorder.SetValue(Grid.RowProperty, row);
+                weeklyBorder.SetValue(Grid.ColumnProperty, 7);
+                weeklyBorder.Style = (Style)FindResource("CalendarCellStyle");
+                weeklyBorder.Background = new SolidColorBrush(Color.FromRgb(0xE8, 0xE8, 0xE8));
+                
+                var weeklyGrid = new Grid();
+                weeklyGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                weeklyGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+                
+                var weekLabel = new TextBlock
+                {
+                    Text = $"Week {row}",
+                    FontWeight = FontWeights.Bold,
+                    FontSize = 14,
+                    Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66)),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                };
+                Grid.SetRow(weekLabel, 0);
+                weeklyGrid.Children.Add(weekLabel);
+                
+                var weeklyHours = new TextBlock
+                {
+                    Text = weeklyTotal > 0 ? $"{weeklyTotal:F1}h" : "-",
+                    FontSize = 16,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = new SolidColorBrush(Color.FromRgb(0x11, 0x11, 0x11)),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                Grid.SetRow(weeklyHours, 1);
+                weeklyGrid.Children.Add(weeklyHours);
+                
+                weeklyBorder.Child = weeklyGrid;
+                CalendarGrid.Children.Add(weeklyBorder);
             }
         }
     }

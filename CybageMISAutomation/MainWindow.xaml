@@ -21,11 +21,13 @@
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                     <Label Content="Employee ID:" VerticalAlignment="Center"/>
                     <TextBox x:Name="txtEmployeeId" Width="100" Margin="5" VerticalAlignment="Center" 
-                             Text="1476" ToolTip="Enter Employee ID"/>
+                             Text="" ToolTip="Enter Employee ID (loaded from config.json)"/>
                     
-                    <CheckBox x:Name="chkManualMode" Content="Manual Mode" 
+                    <!-- Manual Mode controls removed for cleaner UI -->
+                    
+                    <CheckBox x:Name="chkShowLogs" Content="Show Log Window" 
                               VerticalAlignment="Center" Margin="20,0,0,0" 
-                              Checked="ChkManualMode_Checked" Unchecked="ChkManualMode_Unchecked"/>
+                              Checked="ChkShowLogs_Checked" Unchecked="ChkShowLogs_Unchecked"/>
                     
             <Button x:Name="btnStartFullAutomation" Content="Today/Yesterday Report" 
                             Width="150" Height="35" Margin="30,0,0,0"
@@ -40,11 +42,11 @@
                             Width="130" Height="35" Margin="20,0,0,0"
                             Click="BtnMonthlyReport_Click" IsEnabled="False"
                             Background="#FF4682B4" Foreground="White" FontWeight="Bold"/>
-                    <Button x:Name="btnFullReport" Content="🗓 Full Report"
-                            Width="120" Height="35" Margin="20,0,0,0"
+                    <Button x:Name="btnFullReport" Content="� Full Calendar Report"
+                            Width="160" Height="40" Margin="20,0,0,0"
                             Click="BtnFullReport_Click" IsEnabled="True"
-                            Background="#FF2F4F4F" Foreground="White" FontWeight="Bold"
-                            ToolTip="Aggregate Monthly + Today/Yesterday into calendar"/>
+                            Background="#FF228B22" Foreground="White" FontWeight="Bold" FontSize="14"
+                            ToolTip="Generate comprehensive monthly calendar with today/yesterday data"/>
                 </StackPanel>
                 
                 <!-- Second Row: Manual Controls (Hidden by default) -->

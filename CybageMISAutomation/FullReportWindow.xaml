@@ -74,6 +74,7 @@
                 <ColumnDefinition Width="*"/> <!-- Fri -->
                 <ColumnDefinition Width="*"/> <!-- Sat -->
                 <ColumnDefinition Width="*"/> <!-- Sun -->
+                <ColumnDefinition Width="120"/> <!-- Weekly Total -->
             </Grid.ColumnDefinitions>
             
             <!-- Headers -->
@@ -97,6 +98,9 @@
             </Border>
             <Border Grid.Row="0" Grid.Column="6" Style="{StaticResource HeaderCellStyle}">
                 <TextBlock Text="Sunday" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+            </Border>
+            <Border Grid.Row="0" Grid.Column="7" Style="{StaticResource HeaderCellStyle}">
+                <TextBlock Text="Weekly Total" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
             </Border>
         </Grid>
     </DockPanel>

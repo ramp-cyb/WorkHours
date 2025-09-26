@@ -1,5 +1,6 @@
 using System.Windows;
 using CybageMISAutomation.Models;
+using CybageMISAutomation.Services;
 using System.Windows.Controls;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
@@ -18,7 +19,7 @@ namespace CybageMISAutomation
     /// </summary>
     public partial class MainWindow : Window
     {
-        private const string MIS_URL = "https://cybagemis.cybage.com/Report%20Builder/RPTN/ReportPage.aspx";
+        private AppConfig _config = new AppConfig();
         private bool _isWebViewInitialized = false;
         private ObservableCollection<SwipeLogEntry> _swipeLogData = new();
         private LogWindow? _logWindow;
@@ -35,11 +36,41 @@ namespace CybageMISAutomation
             if (this.FindName("dataGridResults") is DataGrid dg)
                 dg.ItemsSource = _swipeLogData;
             
-            // Create and show log window
-            _logWindow = new LogWindow();
-            _logWindow.Show();
-            
-            InitializeWebView();
+            LoadConfigurationAsync();
+        }
+        
+        private async void LoadConfigurationAsync()
+        {
+            try
+            {
+                _config = await ConfigurationService.LoadConfigurationAsync();
+                
+                // Apply configuration
+                txtEmployeeId.Text = _config.EmployeeId;
+                Title = _config.WindowTitle;
+                
+                // Create and show/hide log window based on config
+                _logWindow = new LogWindow();
+                chkShowLogs.IsChecked = _config.ShowLogWindow;
+                if (_config.ShowLogWindow)
+                {
+                    _logWindow.Show();
+                }
+                else
+                {
+                    _logWindow.Hide();
+                }
+                
+                LogMessage($"Configuration loaded: Employee ID = {_config.EmployeeId}");
+                InitializeWebView();
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Failed to load configuration: {ex.Message}");
+                // Create log window with default setting (hidden)
+                _logWindow = new LogWindow();
+                InitializeWebView();
+            }
         }
 
         private async void InitializeWebView()
@@ -173,10 +204,10 @@ namespace CybageMISAutomation
                 
                 UpdateStatus("Starting navigation to Cybage MIS...", 25);
                 LogMessage("Starting automation process...");
-                LogMessage($"Target URL: {MIS_URL}");
+                LogMessage($"Target URL: {_config.MisUrl}");
 
                 // Navigate to the MIS page
-                webView.CoreWebView2.Navigate(MIS_URL);
+                webView.CoreWebView2.Navigate(_config.MisUrl);
             }
             catch (Exception ex)
             {
@@ -1038,7 +1069,7 @@ namespace CybageMISAutomation
                 UpdateStatus("Resetting to main page...", 0);
 
                 // Navigate back to the main report page
-                webView.CoreWebView2.Navigate("https://cybagemis.cybage.com/Report%20Builder/RPTN/ReportPage.aspx");
+                webView.CoreWebView2.Navigate(_config.MisUrl);
                 
                 // Reset all button states
                 btnExpandTree.IsEnabled = false;
@@ -1136,7 +1167,7 @@ namespace CybageMISAutomation
             {
                 // Step 1: Navigate to main page
                 LogMessage("1️⃣ Navigating to main page...");
-                webView.CoreWebView2.Navigate(MIS_URL);
+                webView.CoreWebView2.Navigate(_config.MisUrl);
                 await WaitForPageLoad();
 
                 // Step 2: Expand tree
@@ -1175,7 +1206,7 @@ namespace CybageMISAutomation
             {
                 // Step 7: Reset to main page
                 LogMessage("7️⃣ Resetting to main page...");
-                webView.CoreWebView2.Navigate(MIS_URL);
+                webView.CoreWebView2.Navigate(_config.MisUrl);
                 await WaitForPageLoad();
 
                 // Step 8: Expand tree
@@ -1765,6 +1796,8 @@ namespace CybageMISAutomation
             }
         }
 
+        // Manual mode controls removed - keeping manual controls permanently hidden
+        /*
         private void ChkManualMode_Checked(object sender, RoutedEventArgs e)
         {
             pnlManualControls.Visibility = Visibility.Visible;
@@ -1775,6 +1808,29 @@ namespace CybageMISAutomation
         {
             pnlManualControls.Visibility = Visibility.Collapsed;
             LogMessage("Manual Mode disabled - hiding manual controls");
+        }
+        */
+        
+        private async void ChkShowLogs_Checked(object sender, RoutedEventArgs e)
+        {
+            if (_logWindow != null)
+            {
+                _logWindow.Show();
+                _config.ShowLogWindow = true;
+                await ConfigurationService.SaveConfigurationAsync(_config);
+                LogMessage("Log window shown");
+            }
+        }
+
+        private async void ChkShowLogs_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (_logWindow != null)
+            {
+                _logWindow.Hide();
+                _config.ShowLogWindow = false;
+                await ConfigurationService.SaveConfigurationAsync(_config);
+                LogMessage("Log window hidden");
+            }
         }
 
         #region Monthly Report Functions
@@ -1831,7 +1887,7 @@ namespace CybageMISAutomation
             {
                 // Step 1: Navigate to main page
                 LogMessage("1️⃣ Navigating to main page...");
-                webView.CoreWebView2.Navigate(MIS_URL);
+                webView.CoreWebView2.Navigate(_config.MisUrl);
                 await WaitForPageLoad();
 
                 // Step 2: Expand Leave Management tree (same as Today/Yesterday)
@@ -2935,7 +2991,7 @@ namespace CybageMISAutomation
             try
             {
                 LogMessage($"[DAILY] Navigating to MIS for {dayType}...");
-                webView.CoreWebView2.Navigate(MIS_URL);
+                webView.CoreWebView2.Navigate(_config.MisUrl);
                 await WaitForPageLoad();
                 
                 LogMessage($"[DAILY] Expanding tree for {dayType}...");
