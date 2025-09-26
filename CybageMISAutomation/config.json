@@ -2,6 +2,7 @@
   "employeeId": "1476",
   "misUrl": "https://cybagemis.cybage.com/Report%20Builder/RPTN/ReportPage.aspx",
   "showLogWindow": false,
+  "showMonthly": false,
   "automationDelayMs": 2000,
   "windowTitle": "Cybage MIS Report Automation"
 }

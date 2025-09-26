@@ -49,6 +49,10 @@ namespace CybageMISAutomation
                 txtEmployeeId.Text = _config.EmployeeId;
                 Title = _config.WindowTitle;
                 
+                // Apply UI visibility settings
+                btnMonthlyReport.Visibility = _config.ShowMonthly ? Visibility.Visible : Visibility.Collapsed;
+                btnFullReport.IsEnabled = false; // Will be enabled after WebView initialization
+                
                 // Create and show/hide log window based on config
                 _logWindow = new LogWindow();
                 chkShowLogs.IsChecked = _config.ShowLogWindow;
@@ -98,11 +102,12 @@ namespace CybageMISAutomation
                 UpdateStatus("WebView2 initialized successfully with Windows Authentication.", 20);
                 LogMessage("WebView2 initialization complete. Ready for navigation.");
 
+                // Enable buttons after successful WebView initialization
                 btnStartAutomation.IsEnabled = true;
                 btnStartFullAutomation.IsEnabled = true; // renamed caption only
-                btnMonthlyReport.IsEnabled = true;
-                if (this.FindName("btnFullReport") is Button frBtnInit)
-                    frBtnInit.IsEnabled = true; // Always enabled per new requirement
+                if (_config.ShowMonthly)
+                    btnMonthlyReport.IsEnabled = true;
+                btnFullReport.IsEnabled = true; // Enable Full Report after init complete
             }
             catch (Exception ex)
             {
