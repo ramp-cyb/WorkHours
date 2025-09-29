@@ -2,7 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:CybageMISAutomation"
-        Title="Full Report" Height="900" Width="1400" Background="#F5F7FA" WindowState="Maximized">
+        Title="Full Report Calendar" Height="720" Width="1200" Background="#F5F7FA" WindowState="Normal"
+        Icon="cybageLogo.png">
     <Window.Resources>
         <local:HoursToBrushConverter x:Key="HoursToBrush"/>
         <Style x:Key="CalendarCellStyle" TargetType="Border">
@@ -44,16 +45,7 @@
                 <TextBlock Text="|" VerticalAlignment="Center" Margin="16,0,16,0"/>
                 <TextBlock Name="TxtSummary" VerticalAlignment="Center" FontSize="14"/>
             </StackPanel>
-            <!-- Legend -->
-            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Rectangle Width="20" Height="16" Fill="#FFB8B8" Stroke="#CC6666"/><TextBlock Text="  &lt;7h" FontSize="12"/></StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Rectangle Width="20" Height="16" Fill="#DFF5DD" Stroke="#8DBA85"/><TextBlock Text="  7-&lt;8h" FontSize="12"/></StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Rectangle Width="20" Height="16" Fill="#A6E3A1" Stroke="#5A9953"/><TextBlock Text="  8-&lt;9h" FontSize="12"/></StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Rectangle Width="20" Height="16" Fill="#6EA8FF" Stroke="#2F6AD9"/><TextBlock Text="  >=9h" FontSize="12"/></StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Rectangle Width="20" Height="16" Fill="#F0F0F0" Stroke="#CCCCCC"/><TextBlock Text="  WO" FontSize="12"/></StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Rectangle Width="20" Height="16" Fill="#FFE7D1" Stroke="#D6A77A"/><TextBlock Text="  Leave" FontSize="12"/></StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Rectangle Width="20" Height="16" Fill="#FFF7CC" Stroke="#D6C76A"/><TextBlock Text="  Holiday" FontSize="12"/></StackPanel>
-            </StackPanel>
+            <!-- Color legend removed - colors are self-explanatory -->
         </StackPanel>
         
         <Grid x:Name="CalendarGrid" Margin="16,0,16,16" ShowGridLines="True">

@@ -1,8 +1,9 @@
 {
-  "employeeId": "1476",
+  "employeeId": "",
   "misUrl": "https://cybagemis.cybage.com/Report%20Builder/RPTN/ReportPage.aspx",
   "showLogWindow": false,
   "showMonthly": false,
+  "autoStartFullReport": true,
   "automationDelayMs": 2000,
   "windowTitle": "Cybage MIS Report Automation"
 }

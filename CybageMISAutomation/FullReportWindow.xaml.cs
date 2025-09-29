@@ -18,6 +18,15 @@ namespace CybageMISAutomation
             InitializeComponent();
             _model = model;
             DataContext = model;
+            
+            // Set window size to 60% of desktop
+            var workArea = SystemParameters.WorkArea;
+            Width = workArea.Width * 0.6;
+            Height = workArea.Height * 0.6;
+            
+            // Center the window
+            WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            
             TxtSummary.Text = $"{model.Year}-{model.Month:00}  Worked: {model.WorkedDays}  Leave: {model.LeaveDays}  WO: {model.WeeklyOffDays}  Holidays: {model.HolidayDays}  Total Hrs: {model.TotalActualHours:F2}  Avg Hrs: {model.AverageActualHours:F2}";
             PopulateCalendarGrid();
         }
@@ -128,7 +137,26 @@ namespace CybageMISAutomation
                 weeklyBorder.SetValue(Grid.RowProperty, row);
                 weeklyBorder.SetValue(Grid.ColumnProperty, 7);
                 weeklyBorder.Style = (Style)FindResource("CalendarCellStyle");
-                weeklyBorder.Background = new SolidColorBrush(Color.FromRgb(0xE8, 0xE8, 0xE8));
+                
+                // Apply color coding based on weekly hours: 40-45 green, 45+ blue, <40 red
+                SolidColorBrush weeklyBackground;
+                if (weeklyTotal >= 45)
+                {
+                    weeklyBackground = new SolidColorBrush(Color.FromRgb(0x87, 0xCE, 0xFA)); // Light blue
+                }
+                else if (weeklyTotal >= 40)
+                {
+                    weeklyBackground = new SolidColorBrush(Color.FromRgb(0x90, 0xEE, 0x90)); // Light green
+                }
+                else if (weeklyTotal > 0)
+                {
+                    weeklyBackground = new SolidColorBrush(Color.FromRgb(0xFF, 0xB6, 0xC1)); // Light red
+                }
+                else
+                {
+                    weeklyBackground = new SolidColorBrush(Color.FromRgb(0xE8, 0xE8, 0xE8)); // Light gray for no data
+                }
+                weeklyBorder.Background = weeklyBackground;
                 
                 var weeklyGrid = new Grid();
                 weeklyGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });

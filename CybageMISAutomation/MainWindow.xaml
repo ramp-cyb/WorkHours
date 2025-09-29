@@ -4,18 +4,41 @@
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="Cybage MIS Report Automation" Height="900" Width="1400"
         WindowStartupLocation="CenterScreen"
+        Icon="cybageLogo.png"
         Closing="Window_Closing">
     
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="200"/>
         </Grid.RowDefinitions>
         
+        <!-- Header with Logo -->
+        <DockPanel Grid.Row="0" Margin="10" Background="#E3F2FD">
+            <Border Background="#BBDEFB" 
+                    CornerRadius="8" 
+                    Padding="8,4" 
+                    Margin="5"
+                    DockPanel.Dock="Left">
+                <Image Source="cybageLogo.png" 
+                       Width="120" Height="40" 
+                       Stretch="Uniform"
+                       HorizontalAlignment="Left" 
+                       VerticalAlignment="Center"/>
+            </Border>
+            <TextBlock Text="Cybage MIS Report Automation" 
+                       FontSize="18" 
+                       FontWeight="SemiBold" 
+                       Foreground="#1565C0"
+                       VerticalAlignment="Center" 
+                       Margin="15,0,0,0"/>
+        </DockPanel>
+        
         <!-- Control Panel -->
-        <GroupBox Header="Report Controls" Grid.Row="0" Margin="10">
+        <GroupBox Header="Report Controls" Grid.Row="1" Margin="10">
             <StackPanel Margin="10">
                 <!-- First Row: Basic Controls -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
@@ -28,6 +51,11 @@
                     <CheckBox x:Name="chkShowLogs" Content="Show Log Window" 
                               VerticalAlignment="Center" Margin="20,0,0,0" 
                               Checked="ChkShowLogs_Checked" Unchecked="ChkShowLogs_Unchecked"/>
+                              
+                    <CheckBox x:Name="chkAutoStartFullReport" Content="Auto Start Full Report" 
+                              VerticalAlignment="Center" Margin="20,0,0,0" 
+                              Checked="ChkAutoStartFullReport_Checked" Unchecked="ChkAutoStartFullReport_Unchecked"
+                              ToolTip="Automatically run full calendar report when application starts"/>
                     
             <Button x:Name="btnStartFullAutomation" Content="Today/Yesterday Report" 
                             Width="150" Height="35" Margin="30,0,0,0"
@@ -89,7 +117,7 @@
         </GroupBox>
         
         <!-- Status Panel -->
-        <GroupBox Header="Status" Grid.Row="1" Margin="10,0,10,10">
+        <GroupBox Header="Status" Grid.Row="2" Margin="10,0,10,10">
             <StackPanel Margin="10">
                 <TextBlock x:Name="txtStatus" Text="Initializing WebView2..." 
                           Foreground="Blue" FontWeight="Bold"/>
@@ -99,12 +127,12 @@
         </GroupBox>
         
         <!-- WebView2 -->
-        <GroupBox Header="Web Browser" Grid.Row="2" Margin="10,0,10,10">
+        <GroupBox Header="Web Browser" Grid.Row="3" Margin="10,0,10,10">
             <wv2:WebView2 x:Name="webView" Margin="5"/>
         </GroupBox>
         
         <!-- Data Grid 
-        <GroupBox Header="Extracted Swipe Data" Grid.Row="3" Margin="10,5,10,10">
+        <GroupBox Header="Extracted Swipe Data" Grid.Row="4" Margin="10,5,10,10">
             <DataGrid x:Name="dataGridResults" Margin="5" AutoGenerateColumns="True" 
                      IsReadOnly="True" AlternatingRowBackground="LightGray"/>
         </GroupBox>-->

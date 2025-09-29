@@ -6,11 +6,56 @@
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
+    
+    <!-- Size optimization settings (WPF-compatible) -->
+    <PublishTrimmed>false</PublishTrimmed>
+    
+    <!-- Remove unused cultures (saves ~10-15MB) -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+    
+    <!-- Reduce debugging info in release -->
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    
+    <!-- Additional optimizations -->
+    <Optimize>true</Optimize>
+    
+    <!-- Application icon (for executable file) -->
+    <ApplicationIcon>cybage30.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <!-- Release-specific optimizations -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <!-- Multi-file deployment for easier packaging -->
+    <PublishSingleFile>false</PublishSingleFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2420.47" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <!-- Exclude unused language resources to save space -->
+  <ItemGroup>
+    <SatelliteResourceLanguages Include="en" />
+  </ItemGroup>
+
+  <!-- Exclude specific unused assemblies -->
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="false" />
+  </ItemGroup>
+
+  <!-- Include logo as embedded resource -->
+  <ItemGroup>
+    <Resource Include="cybageLogo.png">
+      <Pack>True</Pack>
+    </Resource>
+    <Content Include="cybage30.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

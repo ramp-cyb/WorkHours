@@ -1,0 +1,16 @@
+<linker>
+  <!-- Preserve WebView2 assemblies -->
+  <assembly fullname="Microsoft.Web.WebView2.Core" />
+  <assembly fullname="Microsoft.Web.WebView2.Wpf" />
+  
+  <!-- Preserve WPF assemblies that might be dynamically accessed -->
+  <assembly fullname="PresentationFramework" />
+  <assembly fullname="PresentationCore" />
+  <assembly fullname="WindowsBase" />
+  
+  <!-- Preserve JSON serialization -->
+  <assembly fullname="Newtonsoft.Json" />
+  
+  <!-- Preserve main application -->
+  <assembly fullname="CybageMISAutomation" />
+</linker>

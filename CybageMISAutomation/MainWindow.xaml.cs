@@ -1,6 +1,7 @@
 using System.Windows;
 using CybageMISAutomation.Models;
 using CybageMISAutomation.Services;
+using CybageMISAutomation.Views;
 using System.Windows.Controls;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
@@ -31,12 +32,22 @@ namespace CybageMISAutomation
 
         public MainWindow()
         {
-            InitializeComponent();
-            // dataGridResults grid is currently commented out in XAML; attach if reinstated
-            if (this.FindName("dataGridResults") is DataGrid dg)
-                dg.ItemsSource = _swipeLogData;
-            
-            LoadConfigurationAsync();
+            try
+            {
+                InitializeComponent();
+                // dataGridResults grid is currently commented out in XAML; attach if reinstated
+                if (this.FindName("dataGridResults") is DataGrid dg)
+                    dg.ItemsSource = _swipeLogData;
+                
+                LoadConfigurationAsync();
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"MainWindow constructor failed: {ex}");
+                MessageBox.Show($"Failed to initialize main window: {ex.Message}\n\nDetailed error logged to LocalAppData\\CybageMISAutomation\\startup.log",
+                    "Cybage MIS Automation - Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                throw;
+            }
         }
         
         private async void LoadConfigurationAsync()
@@ -53,9 +64,15 @@ namespace CybageMISAutomation
                 btnMonthlyReport.Visibility = _config.ShowMonthly ? Visibility.Visible : Visibility.Collapsed;
                 btnFullReport.IsEnabled = false; // Will be enabled after WebView initialization
                 
+                // Set checkbox states from config
+                chkShowLogs.IsChecked = _config.ShowLogWindow;
+                chkAutoStartFullReport.IsChecked = _config.AutoStartFullReport;
+                
+                // Add event handler for employee ID changes
+                txtEmployeeId.TextChanged += TxtEmployeeId_TextChanged;
+                
                 // Create and show/hide log window based on config
                 _logWindow = new LogWindow();
-                chkShowLogs.IsChecked = _config.ShowLogWindow;
                 if (_config.ShowLogWindow)
                 {
                     _logWindow.Show();
@@ -70,7 +87,22 @@ namespace CybageMISAutomation
             }
             catch (Exception ex)
             {
-                LogMessage($"Failed to load configuration: {ex.Message}");
+                LogMessage($"Failed to load configuration: {ex}");
+                MessageBox.Show($"Configuration Error: {ex.Message}\n\nThe application will try to continue with defaults.",
+                    "Configuration Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                
+                // Try to continue with default config
+                _config = new AppConfig();
+                try
+                {
+                    InitializeWebView();
+                }
+                catch (Exception webEx)
+                {
+                    LogMessage($"WebView initialization also failed: {webEx}");
+                    MessageBox.Show($"Critical Error: Cannot initialize browser component.\n\n{webEx.Message}",
+                        "Startup Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
                 // Create log window with default setting (hidden)
                 _logWindow = new LogWindow();
                 InitializeWebView();
@@ -81,7 +113,28 @@ namespace CybageMISAutomation
         {
             try
             {
-                UpdateStatus("Initializing WebView2 with Windows Authentication...", 10);
+                LogMessage("Starting WebView2 initialization...");
+                UpdateStatus("Checking WebView2 Runtime availability...", 10);
+                
+                // Check if WebView2 runtime is available
+                try
+                {
+                    var version = CoreWebView2Environment.GetAvailableBrowserVersionString();
+                    LogMessage($"WebView2 Runtime found: {version}");
+                }
+                catch (WebView2RuntimeNotFoundException)
+                {
+                    string errorMsg = "WebView2 Runtime is not installed on this machine.\\n\\n" +
+                                    "Please install it from:\\n" +
+                                    "https://developer.microsoft.com/microsoft-edge/webview2/\\n\\n" +
+                                    "Or use the 'Evergreen Bootstrapper' for automatic installation.";
+                    LogMessage("WebView2 Runtime not found!");
+                    MessageBox.Show(errorMsg, "Missing WebView2 Runtime", 
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                UpdateStatus("Initializing WebView2 with Windows Authentication...", 20);
 
                 // Configure WebView2 environment with Windows authentication
                 var options = new CoreWebView2EnvironmentOptions();
@@ -89,8 +142,13 @@ namespace CybageMISAutomation
                 options.AllowSingleSignOnUsingOSPrimaryAccount = true;
                 
                 var userDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\CybageReportViewer";
+                LogMessage($"Creating WebView2 environment with user data folder: {userDataFolder}");
+                
                 var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
+                LogMessage("WebView2 environment created successfully");
+                
                 await webView.EnsureCoreWebView2Async(env);
+                LogMessage("WebView2 core initialized successfully");
 
                 // Set up event handlers
                 webView.CoreWebView2.NavigationStarting += WebView_NavigationStarting;
@@ -108,6 +166,12 @@ namespace CybageMISAutomation
                 if (_config.ShowMonthly)
                     btnMonthlyReport.IsEnabled = true;
                 btnFullReport.IsEnabled = true; // Enable Full Report after init complete
+                
+                // Auto start full report if configured
+                if (_config.AutoStartFullReport)
+                {
+                    await HandleAutoStartWithEmployeeIdValidation();
+                }
             }
             catch (Exception ex)
             {
@@ -1836,6 +1900,87 @@ namespace CybageMISAutomation
                 await ConfigurationService.SaveConfigurationAsync(_config);
                 LogMessage("Log window hidden");
             }
+        }
+        
+        private async void ChkAutoStartFullReport_Checked(object sender, RoutedEventArgs e)
+        {
+            _config.AutoStartFullReport = true;
+            await ConfigurationService.SaveConfigurationAsync(_config);
+            LogMessage("Auto start full report enabled");
+        }
+
+        private async void ChkAutoStartFullReport_Unchecked(object sender, RoutedEventArgs e)
+        {
+            _config.AutoStartFullReport = false;
+            await ConfigurationService.SaveConfigurationAsync(_config);
+            LogMessage("Auto start full report disabled");
+        }
+        
+        private async void TxtEmployeeId_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_config != null && txtEmployeeId.Text != _config.EmployeeId)
+            {
+                _config.EmployeeId = txtEmployeeId.Text;
+                await ConfigurationService.SaveConfigurationAsync(_config);
+                LogMessage($"Employee ID updated to: {txtEmployeeId.Text}");
+            }
+        }
+        
+        private async Task HandleAutoStartWithEmployeeIdValidation()
+        {
+            try
+            {
+                // Check if employee ID is empty
+                if (string.IsNullOrWhiteSpace(_config.EmployeeId))
+                {
+                    LogMessage("Auto-start requested but Employee ID is empty. Prompting user...");
+                    
+                    // Show popup on UI thread and get result
+                    var dialogResult = await Dispatcher.InvokeAsync(() =>
+                    {
+                        var dialog = new EmployeeIdInputDialog()
+                        {
+                            Owner = this
+                        };
+                        var result = dialog.ShowDialog();
+                        return new { Success = result == true, EmployeeId = result == true ? dialog.EmployeeId : null };
+                    });
+                    
+                    if (dialogResult.Success && !string.IsNullOrWhiteSpace(dialogResult.EmployeeId))
+                    {
+                        // Update config and UI
+                        _config.EmployeeId = dialogResult.EmployeeId;
+                        await ConfigurationService.SaveConfigurationAsync(_config);
+                        
+                        // Update UI on main thread
+                        Dispatcher.Invoke(() => txtEmployeeId.Text = dialogResult.EmployeeId);
+                        
+                        LogMessage($"Employee ID set to: {dialogResult.EmployeeId}. Proceeding with auto-start...");
+                        
+                        // Proceed with auto-start
+                        await StartAutoReport();
+                    }
+                    else
+                    {
+                        LogMessage("Auto-start cancelled: No valid Employee ID provided.");
+                    }
+                }
+                else
+                {
+                    LogMessage("Auto-starting full calendar report...");
+                    await StartAutoReport();
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error during auto-start validation: {ex.Message}");
+            }
+        }
+        
+        private async Task StartAutoReport()
+        {
+            await Task.Delay(1000); // Brief delay after initialization
+            Dispatcher.Invoke(() => BtnFullReport_Click(btnFullReport, new RoutedEventArgs()));
         }
 
         #region Monthly Report Functions
