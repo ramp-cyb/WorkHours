@@ -1,193 +1,68 @@
-# MSI Installer Development Guide
+# 📦 Cybage MIS Report Automation - Installer
 
-## 🔧 Installer Architecture
+This directory contains the complete installer package for Cybage MIS Report Automation.
 
-### **WiX Toolset v5 Configuration**
-The installer uses modern WiX v5 syntax with embedded CAB for single-file distribution.
+## 🗂️ Files Overview
 
-### **Build Process Flow**
-```mermaid
-graph TD
-    A[dotnet publish] --> B[Optimized Executable 65MB]
-    B --> C[WiX Build Process]
-    C --> D[Embedded CAB Creation]
-    D --> E[MSI Package 59MB]
-    E --> F[Digital Signing - Optional]
+### Production Files
+- **`Build-CybageMIS-Installer.ps1`** - Complete build script (final version)
+- **`CybageMISAutomation-AllFiles-v20250929.msi`** - Ready-to-deploy installer (51.31 MB)
+- **`License.rtf`** - Software license agreement
+
+### Build Artifacts
+- **`CybageMISAutomation-AllFiles-v20250929.wixpdb`** - WiX debug symbols
+
+## 🚀 Quick Deployment
+
+### Ready-to-Use Installer
+The MSI file is ready for immediate deployment:
+```
+CybageMISAutomation-AllFiles-v20250929.msi
 ```
 
-### **Key Files**
-- `CybageMISAutomation.wxs` - WiX installer definition
-- `BuildMSI.ps1` - Automated build script
-- `cybageLogo.png` - Application icon for shortcuts
+**Features:**
+- ✅ Complete self-contained deployment (249 files, 147MB)
+- ✅ All dependencies included (resolves kernelbase.dll crashes)  
+- ✅ Proper folder permissions for config.json modifications
+- ✅ Professional shortcuts with Cybage branding
+- ✅ English-only optimized build
 
-### **Installation Structure**
-```
-Program Files\
-└── Cybage Technology Group\
-    └── MIS Report Automation\
-        ├── CybageMISAutomation.exe (65MB)
-        ├── config.json
-        └── cybageLogo.png
-```
+## 🔧 Rebuilding (If Needed)
 
-## 🚀 Building Installers
+### Prerequisites
+- PowerShell 5.1 or later
+- WiX Toolset v6.0.2
+- .NET 8 SDK
 
-### **Quick Build**
+### Build Command
 ```powershell
-# Standard build with clean
-.\BuildMSI.ps1 -Clean
-
-# Skip application build (use existing)
-.\BuildMSI.ps1 -SkipBuild
-
-# Debug configuration
-.\BuildMSI.ps1 -Configuration Debug
+.\Build-CybageMIS-Installer.ps1
 ```
 
-### **Build Script Parameters**
-- `-Configuration` - Release (default) or Debug
-- `-SkipBuild` - Skip dotnet publish step
-- `-Clean` - Remove previous build artifacts
+This script will:
+1. Build English-only release with all dependencies
+2. Clean up language packs and duplicates  
+3. Generate WiX installer with proper permissions
+4. Create timestamped MSI file
 
-### **Output Files**
-- `CybageMISAutomation-Setup-v[DATE].msi` - Main installer
-- `*.wixpdb` - Debug symbols (safe to delete)
+## 📋 Deployment Checklist
 
-## 📦 Size Optimizations Applied
+**Before Deployment:**
+- [ ] Verify MSI file size (~51MB)
+- [ ] Test on clean target machine
+- [ ] Confirm no Event Viewer errors
 
-### **Application Level** (in .csproj)
-```xml
-<!-- Compression and optimization -->
-<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-<PublishSingleFile>true</PublishSingleFile>
-<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+**Installation:**
+- [ ] Run MSI as administrator
+- [ ] Verify shortcuts created
+- [ ] Test application launch
+- [ ] Confirm config.json saves properly
 
-<!-- Release-specific settings -->
-<PropertyGroup Condition="'$(Configuration)' == 'Release'">
-  <DebugType>none</DebugType>
-  <DebugSymbols>false</DebugSymbols>
-</PropertyGroup>
-```
-
-### **MSI Level** (in .wxs)
-```xml
-<!-- High compression CAB embedded in MSI -->
-<Media Id="1" Cabinet="app.cab" EmbedCab="yes" CompressionLevel="high" />
-
-<!-- Minimal component structure -->
-<ComponentGroup Id="AppFiles">
-  <!-- Only essential files: EXE, config, logo -->
-</ComponentGroup>
-```
-
-## 🔍 Testing & Validation
-
-### **Pre-Release Checklist**
-- [ ] Application builds without errors
-- [ ] Logo displays correctly in UI
-- [ ] MSI installs successfully
-- [ ] Start Menu shortcut works
-- [ ] Desktop shortcut works (optional)
-- [ ] Application starts and loads config
-- [ ] Uninstall removes all files
-
-### **Test Commands**
-```powershell
-# Test installation (as Administrator)
-msiexec /i "CybageMISAutomation-Setup-v[DATE].msi" /quiet
-
-# Test uninstallation
-msiexec /x "CybageMISAutomation-Setup-v[DATE].msi" /quiet
-
-# Interactive installation
-msiexec /i "CybageMISAutomation-Setup-v[DATE].msi"
-```
-
-## 🔧 Troubleshooting
-
-### **Common Build Issues**
-
-1. **WiX not found**
-   ```
-   Solution: Install WiX Toolset v5 from GitHub releases
-   ```
-
-2. **Logo file missing**
-   ```
-   Error: Icon stream is not in the expected format
-   Solution: Ensure cybageLogo.png exists in project root
-   ```
-
-3. **Executable not found**
-   ```
-   Error: Source file not found
-   Solution: Run dotnet publish first or use -SkipBuild flag correctly
-   ```
-
-### **MSI Validation**
-```powershell
-# Check MSI contents
-msiexec /a "installer.msi" TARGETDIR="C:\temp\extract" /quiet
-
-# Validate MSI structure
-# Use Orca tool or InstallShield validation
-```
-
-## 📋 Customization Options
-
-### **Branding Updates**
-```xml
-<!-- Update company information in .wxs -->
-<Package Name="Your App Name" 
-         Manufacturer="Your Company" 
-         Version="1.0.0.0" />
-
-<!-- Update icon reference -->
-<Icon Id="AppIcon" SourceFile="..\yourLogo.png" />
-```
-
-### **Installation Directories**
-```xml
-<!-- Modify installation path -->
-<Directory Id="CompanyFolder" Name="Your Company Name">
-  <Directory Id="INSTALLFOLDER" Name="Your App Name" />
-</Directory>
-```
-
-### **Feature Selection**
-```xml
-<!-- Add optional components -->
-<Feature Id="DesktopShortcut" Title="Desktop Shortcut" Level="2">
-  <ComponentRef Id="DesktopShortcut" />
-</Feature>
-```
-
-## 🚀 Advanced Features
-
-### **Upgrade Handling**
-```xml
-<!-- Add upgrade detection -->
-<MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
-```
-
-### **Custom Actions**
-```xml
-<!-- Add post-install actions -->
-<CustomAction Id="CreateLogDirectory" 
-              Directory="INSTALLFOLDER" 
-              ExeCommand="mkdir logs" />
-```
-
-### **Registry Integration**
-```xml
-<!-- Add registry entries -->
-<Component Id="RegistryEntries">
-  <RegistryKey Root="HKLM" Key="Software\YourCompany\YourApp">
-    <RegistryValue Name="InstallPath" Value="[INSTALLFOLDER]" Type="string" />
-  </RegistryKey>
-</Component>
-```
+## 🎯 Success Metrics
+- **No Dependencies Required:** Self-contained deployment
+- **No Crashes:** Resolves kernelbase.dll issues  
+- **User-Friendly:** Proper permissions and shortcuts
+- **Professional:** Cybage branding and clean installation
 
 ---
-
-*MSI Installer built with WiX Toolset v5 - Professional Windows Installation Experience*
+*For detailed deployment instructions, see `../DEPLOYMENT_GUIDE.md`*
