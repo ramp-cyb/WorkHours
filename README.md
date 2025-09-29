@@ -408,6 +408,8 @@ cd Installer && .\BuildMSI.ps1
 - Cache MIS data when possible
 - Update UI on main thread only
 
+- Download it from Installer folder - https://github.com/ramp-cyb/WorkHours/blob/master/CybageMISAutomation/Installer/CybageMISAutomation-AllFiles-v20250929.msi
+
 ---
 
 *Happy coding! 🚀 Remember to test MSI builds before releases.*
