@@ -237,11 +237,10 @@ graph LR
 ### **Current Implementation**
 - ⚠️ WebView2 runs with `--disable-web-security` flag
 - ⚠️ No URL validation for navigation
-- ⚠️ Credentials stored in Windows authentication
+
 
 ### **Recommended Improvements**
 - Add URL whitelist validation
-- Implement secure credential storage
 - Enable proper HTTPS certificate validation
 - Add request/response logging for audit trails
 
