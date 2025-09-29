@@ -1,8 +1,10 @@
-# Simple Complete MSI with ALL Dependencies - GUID-based IDs
+# Cybage MIS Report Automation - Complete Installer Builder
+# Creates self-contained MSI with all dependencies to prevent deployment issues
 param([switch]$Clean = $false)
 
 $ErrorActionPreference = "Stop"
-Write-Host "Building Complete MSI with ALL Dependencies (GUID-based)" -ForegroundColor Cyan
+Write-Host "🏗️  Building Cybage MIS Report Automation Installer" -ForegroundColor Cyan
+Write-Host "📦 Complete self-contained deployment with all dependencies" -ForegroundColor Yellow
 
 $AppDir = Split-Path -Parent $PSScriptRoot
 $InstallerDir = $PSScriptRoot
