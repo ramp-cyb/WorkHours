@@ -5,7 +5,14 @@ A streamlined WPF application for automating MIS report generation and calendar 
 
 ![Cybage Logo](cybageLogo.png)
 
-Download the MSI installer package for Windows - https://github.com/ramp-cyb/WorkHours/raw/refs/heads/master/CybageMISAutomation/Installer/CybageMISAutomation-AllFiles-v20250929.msi
+Download the MSI installer package for Windows - https://github.com/ramp-cyb/WorkHours/raw/refs/heads/master/CybageMISAutomation/Installer/CybageMISAutomation-AllFiles-v20250930.msi
+
+Or downlooad the Zip 
+
+Download the MSI installer package for Windows - https://github.com/ramp-cyb/WorkHours/raw/refs/heads/master/CybageMISAutomation/Installer/CybageMISAutomation-v20250930.zip
+
+
+
 
 ## 🚀 Quick Start
 
