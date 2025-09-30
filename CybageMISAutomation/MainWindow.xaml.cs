@@ -541,76 +541,82 @@ namespace CybageMISAutomation
                 LogMessage("Starting swipe log link click process...");
 
                 // First verify the swipe log link is still available and get its details
-                var linkVerificationResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
-                    (function() {
-                        var swipeLogLink = document.getElementById('TempleteTreeViewt32');
-                        if (swipeLogLink) {
-                            return JSON.stringify({
-                                found: true,
-                                text: swipeLogLink.textContent || swipeLogLink.innerText,
-                                href: swipeLogLink.getAttribute('href') || '',
-                                onclick: swipeLogLink.getAttribute('onclick') || '',
-                                visible: window.getComputedStyle(swipeLogLink).display !== 'none'
-                            });
-                        }
-                        return JSON.stringify({found: false, error: 'Link not found'});
-                    })()
-                ");
+                    // Locate and click the swipe log link in a single script execution
+                    var clickResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
+                        (function() {
+                            var result = {
+                                success: false,
+                                found: false,
+                                clicked: false,
+                                error: null,
+                                details: null
+                            };
 
-                var linkInfo = JsonConvert.DeserializeObject<dynamic>(
-                    linkVerificationResult.Trim('"').Replace("\\\"", "\""));
+                            try {
+                                var anchors = document.querySelectorAll('a');
+                                var targetText = ""today's and yesterday's swipe log"";
 
-                if (!(bool)linkInfo.found)
-                {
-                    LogMessage("ERROR: Swipe Log link not found or disappeared");
-                    UpdateStatus("Swipe Log link not available", 0);
-                    return;
-                }
+                                for (var i = 0; i < anchors.length; i++) {
+                                    var text = (anchors[i].textContent || anchors[i].innerText || '').trim();
+                                    var id = anchors[i].id || '';
 
-                LogMessage($"✓ Swipe Log link verified: '{linkInfo.text}'");
-                LogMessage($"  OnClick: {linkInfo.onclick}");
+                                    if (text && text.toLowerCase() === targetText && id.startsWith('TempleteTreeView')) {
+                                        result.found = true;
+                                        result.details = {
+                                            id: id || 'no-id',
+                                            text: text,
+                                            href: anchors[i].getAttribute('href') || '',
+                                            onclick: anchors[i].getAttribute('onclick') || '',
+                                            visible: window.getComputedStyle(anchors[i]).display !== 'none',
+                                            className: anchors[i].className || ''
+                                        };
 
-                // Click the swipe log link
-                var clickResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
-                    (function() {
-                        try {
-                            var swipeLogLink = document.getElementById('TempleteTreeViewt32');
-                            if (!swipeLogLink) {
-                                return JSON.stringify({success: false, error: 'Link not found'});
+                                        anchors[i].click();
+                                        result.clicked = true;
+                                        result.success = true;
+                                        return JSON.stringify(result);
+                                    }
+                                }
+
+                                result.error = 'Link not found';
+                                return JSON.stringify(result);
+                            } catch (ex) {
+                                result.error = ex.message || ex.toString();
+                                return JSON.stringify(result);
                             }
+                        })()
+                    ");
 
-                            // Simulate the click - this should trigger the __doPostBack
-                            swipeLogLink.click();
-                            
-                            return JSON.stringify({
-                                success: true, 
-                                message: 'Swipe log link clicked successfully'
-                            });
-                        } catch (ex) {
-                            return JSON.stringify({success: false, error: ex.message});
+                    var clickResponse = JsonConvert.DeserializeObject<dynamic>(
+                        clickResult.Trim('"').Replace("\\\"", "\""));
+
+                    if ((bool)clickResponse.success && (bool)clickResponse.clicked)
+                    {
+                        if (clickResponse.details != null)
+                        {
+                            LogMessage($"✓ Swipe Log link clicked successfully: '{clickResponse.details.text}'");
+                            LogMessage($"  ID: {clickResponse.details.id}, Class: {clickResponse.details.className}, OnClick: {clickResponse.details.onclick}");
                         }
-                    })()
-                ");
+                        else
+                        {
+                            LogMessage("✓ Swipe Log link clicked successfully (no additional details)");
+                        }
 
-                var clickResponse = JsonConvert.DeserializeObject<dynamic>(
-                    clickResult.Trim('"').Replace("\\\"", "\""));
+                        UpdateStatus("Waiting for report page to load...", 60);
 
-                if ((bool)clickResponse.success)
-                {
-                    LogMessage("✓ Swipe Log link clicked successfully");
-                    UpdateStatus("Waiting for report page to load...", 60);
+                        // Wait for the page to navigate/change after the postback
+                        await Task.Delay(3000);
 
-                    // Wait for the page to navigate/change after the postback
-                    await Task.Delay(3000);
-
-                    // Verify we've navigated to the report configuration page
-                    await VerifyReportPage();
-                }
-                else
-                {
-                    LogMessage($"ERROR clicking swipe log link: {clickResponse.error}");
-                    UpdateStatus("Failed to click swipe log link", 0);
-                }
+                        // Verify we've navigated to the report configuration page
+                        await VerifyReportPage();
+                    }
+                    else
+                    {
+                        var errorMsg = clickResponse.error?.ToString() ?? "Unknown error";
+                        LogMessage($"ERROR clicking swipe log link: {errorMsg}");
+                        UpdateStatus($"Swipe log click failed: {errorMsg}", 0);
+                        throw new Exception($"Swipe log click failed: {errorMsg}");
+                    }
             }
             catch (Exception ex)
             {
@@ -1239,26 +1245,21 @@ namespace CybageMISAutomation
                 webView.CoreWebView2.Navigate(_config.MisUrl);
                 await WaitForPageLoad();
 
-                // Step 2: Expand tree
-                LogMessage("2️⃣ Expanding Leave Management tree...");
-                await ExecuteExpandTree();
-                await Task.Delay(500); // Brief pause
-
-                // Step 3: Click swipe log link
-                LogMessage("3️⃣ Clicking swipe log link...");
+                // Step 2: Click swipe log link directly (no tree expansion)
+                LogMessage("2️⃣ Clicking swipe log link...");
                 await ExecuteClickSwipeLog();
 
-                // Step 4: Select Today
-                LogMessage("4️⃣ Selecting Today from dropdown...");
+                // Step 3: Select Today
+                LogMessage("3️⃣ Selecting Today from dropdown...");
                 cmbReportType.SelectedIndex = 0; // Today
                 await Task.Delay(500);
 
-                // Step 5: Generate report
-                LogMessage("5️⃣ Generating Today's report...");
+                // Step 4: Generate report
+                LogMessage("4️⃣ Generating Today's report...");
                 await ExecuteGenerateReport();
 
-                // Step 6: Extract data
-                LogMessage("6️⃣ Extracting Today's data...");
+                // Step 5: Extract data
+                LogMessage("5️⃣ Extracting Today's data...");
                 _todayData = await ExecuteDataExtraction();
                 LogMessage($"  ✅ Today's data extracted: {_todayData.Count} records");
             }
@@ -1278,26 +1279,21 @@ namespace CybageMISAutomation
                 webView.CoreWebView2.Navigate(_config.MisUrl);
                 await WaitForPageLoad();
 
-                // Step 8: Expand tree
-                LogMessage("8️⃣ Expanding Leave Management tree...");
-                await ExecuteExpandTree();
-                await Task.Delay(500); // Brief pause
-
-                // Step 9: Click swipe log link
-                LogMessage("9️⃣ Clicking swipe log link...");
+                // Step 8: Click swipe log link (no tree expansion)
+                LogMessage("8️⃣ Clicking swipe log link...");
                 await ExecuteClickSwipeLog();
 
-                // Step 10: Select Yesterday
-                LogMessage("🔟 Selecting Yesterday from dropdown...");
+                // Step 9: Select Yesterday
+                LogMessage("9️⃣ Selecting Yesterday from dropdown...");
                 cmbReportType.SelectedIndex = 1; // Yesterday
                 await Task.Delay(500);
 
-                // Step 11: Generate report
-                LogMessage("1️⃣1️⃣ Generating Yesterday's report...");
+                // Step 10: Generate report
+                LogMessage("🔟 Generating Yesterday's report...");
                 await ExecuteGenerateReport();
 
-                // Step 12: Extract data
-                LogMessage("1️⃣2️⃣ Extracting Yesterday's data...");
+                // Step 11: Extract data
+                LogMessage("1️⃣1️⃣ Extracting Yesterday's data...");
                 _yesterdayData = await ExecuteDataExtraction();
                 LogMessage($"  ✅ Yesterday's data extracted: {_yesterdayData.Count} records");
             }
@@ -1535,8 +1531,9 @@ namespace CybageMISAutomation
 
         private async Task CallManualExpandTreeFunction()
         {
+            return;
             // This calls the exact same logic as the manual BtnExpandTree_Click
-            try
+            /*try
             {
                 UpdateStatus("Expanding Leave Management System tree node...", 20);
                 LogMessage("Starting tree expansion process...");
@@ -1577,7 +1574,7 @@ namespace CybageMISAutomation
                 else
                 {
                     LogMessage("🔄 Expanding Leave Management System tree node...");
-                    
+
                     // Click the expand icon to expand the tree (same as manual)
                     var clickResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
                         (function() {
@@ -1602,10 +1599,10 @@ namespace CybageMISAutomation
                     {
                         LogMessage("✓ Tree node clicked successfully");
                         UpdateStatus("Waiting for tree expansion to complete...", 60);
-                        
+
                         // Wait a moment for the tree to expand (same as manual)
                         await Task.Delay(2000);
-                        
+
                         // Verify expansion occurred and look for swipe log option (same as manual)
                         await CheckForSwipeLogOption();
                     }
@@ -1620,63 +1617,39 @@ namespace CybageMISAutomation
             {
                 LogMessage($"ERROR: Tree expansion failed - {ex.Message}");
                 throw;
-            }
+            }*/
         }
+
 
         private async Task ExecuteClickSwipeLog()
-        {
-            // Call the SAME function that works in manual mode
-            LogMessage("🔗 Calling manual swipe log click function...");
-            await CallManualSwipeLogClickFunction();
-        }
-
-        private async Task CallManualSwipeLogClickFunction()
         {
             try
             {
                 UpdateStatus("Clicking 'Today's and Yesterday's Swipe Log' link...", 30);
                 LogMessage("Starting swipe log link click process...");
 
-                // First verify the swipe log link is still available and get its details (same as manual)
-                var linkVerificationResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
-                    (function() {
-                        var swipeLogLink = document.getElementById('TempleteTreeViewt32');
-                        if (swipeLogLink) {
-                            return JSON.stringify({
-                                found: true,
-                                text: swipeLogLink.textContent || swipeLogLink.innerText,
-                                href: swipeLogLink.getAttribute('href') || '',
-                                onclick: swipeLogLink.getAttribute('onclick') || '',
-                                visible: window.getComputedStyle(swipeLogLink).display !== 'none'
-                            });
-                        }
-                        return JSON.stringify({found: false, error: 'Link not found'});
-                    })()
-                ");
-
-                var linkInfo = JsonConvert.DeserializeObject<dynamic>(
-                    linkVerificationResult.Trim('"').Replace("\\\"", "\""));
-
-                if (!(bool)linkInfo.found)
-                {
-                    LogMessage("ERROR: Swipe Log link not found or disappeared");
-                    throw new Exception("Swipe Log link not found or disappeared");
-                }
-
-                LogMessage($"✓ Swipe Log link verified: '{linkInfo.text}'");
-                LogMessage($"  OnClick: {linkInfo.onclick}");
-
+               
                 // Click the swipe log link (same as manual)
                 var clickResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
                     (function() {
                         try {
-                            var swipeLogLink = document.getElementById('TempleteTreeViewt32');
-                            if (!swipeLogLink) {
-                                return JSON.stringify({success: false, error: 'Link not found'});
+                            var anchors = document.querySelectorAll('a');
+                            var target = null;
+                            for (var i = 0; i < anchors.length; i++) {
+                                var text = (anchors[i].textContent || anchors[i].innerText || '').trim();
+                                var id = anchors[i].id || '';
+                                if (text && text.toLowerCase() === ""today's and yesterday's swipe log"" && id.startsWith('TempleteTreeView')) {
+                                    target = anchors[i];
+                                    break;
+                                }
+                            }
+
+                            if (!target) {
+                                return JSON.stringify({success: false, error: 'swipe log Link not found'});
                             }
 
                             // Simulate the click - this should trigger the __doPostBack
-                            swipeLogLink.click();
+                            target.click();
                             
                             return JSON.stringify({
                                 success: true, 
@@ -2040,29 +2013,24 @@ namespace CybageMISAutomation
                 webView.CoreWebView2.Navigate(_config.MisUrl);
                 await WaitForPageLoad();
 
-                // Step 2: Expand Leave Management tree (same as Today/Yesterday)
-                LogMessage("2️⃣ Expanding Leave Management tree...");
-                await ExecuteExpandTree();
-                await Task.Delay(500); // Brief pause
-
-                // Step 3: Navigate to Attendance Log Report
-                LogMessage("3️⃣ Navigating to Attendance Log Report...");
+                // Step 2: Navigate directly to Attendance Log Report (tree expansion not required)
+                LogMessage("2️⃣ Navigating to Attendance Log Report...");
                 await NavigateToAttendanceLogReport();
 
-                // Step 4: Select employee
-                LogMessage("4️⃣ Selecting employee...");
+                // Step 3: Select employee
+                LogMessage("3️⃣ Selecting employee...");
                 await SelectEmployeeInAttendanceReport();
 
-                // Step 5: Set date range (1st of current month to today)
-                LogMessage("5️⃣ Setting date range for current month...");
+                // Step 4: Set date range (1st of current month to today)
+                LogMessage("4️⃣ Setting date range for current month...");
                 await SetMonthlyDateRange();
 
-                // Step 6: Generate report
-                LogMessage("6️⃣ Generating monthly report...");
+                // Step 5: Generate report
+                LogMessage("5️⃣ Generating monthly report...");
                 await GenerateAttendanceReport();
 
-                // Step 7: Extract data from report
-                LogMessage("7️⃣ Extracting data from monthly report...");
+                // Step 6: Extract data from report
+                LogMessage("6️⃣ Extracting data from monthly report...");
                 monthlyData = await ParseMonthlyReportData();
 
                 LogMessage($"✅ Successfully extracted {monthlyData.Count} monthly records");
@@ -2083,19 +2051,32 @@ namespace CybageMISAutomation
                 UpdateStatus("Clicking 'Attendance Log Report' link...", 30);
                 LogMessage("Starting Attendance Log Report click process...");
 
-                // First verify the Attendance Log Report link is available and get its details (same pattern as swipe log)
+                // First verify the Attendance Log Report link is available and get its details (located by visible text)
                 var linkVerificationResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
                     (function() {
-                        var attendanceLogLink = document.getElementById('TempleteTreeViewt22');
-                        if (attendanceLogLink) {
+                        var anchors = document.querySelectorAll('a');
+                        var target = null;
+                        for (var i = 0; i < anchors.length; i++) {
+                            var text = (anchors[i].textContent || anchors[i].innerText || '').trim();
+                            var id = anchors[i].id || '';
+                            if (text && text.toLowerCase() === 'attendance log report' && id.startsWith('TempleteTreeView')) {
+                                target = anchors[i];
+                                break;
+                            }
+                        }
+
+                        if (target) {
                             return JSON.stringify({
                                 found: true,
-                                text: attendanceLogLink.textContent || attendanceLogLink.innerText,
-                                href: attendanceLogLink.getAttribute('href') || '',
-                                hasOnClick: !!attendanceLogLink.getAttribute('onclick'),
-                                visible: window.getComputedStyle(attendanceLogLink).display !== 'none'
+                                id: target.id || 'no-id',
+                                text: target.textContent || target.innerText,
+                                href: target.getAttribute('href') || '',
+                                hasOnClick: !!target.getAttribute('onclick'),
+                                visible: window.getComputedStyle(target).display !== 'none',
+                                className: target.className || ''
                             });
                         }
+
                         return JSON.stringify({found: false, error: 'Attendance Log Report link not found'});
                     })()
                 ");
@@ -2110,19 +2091,29 @@ namespace CybageMISAutomation
                 }
 
                 LogMessage($"✓ Attendance Log Report link verified: '{linkInfo.text}'");
-                LogMessage($"  HasOnClick: {linkInfo.hasOnClick}");
+                LogMessage($"  ID: {linkInfo.id}, Class: {linkInfo.className}, HasOnClick: {linkInfo.hasOnClick}");
 
-                // Click the Attendance Log Report link (same pattern as swipe log)
+                // Click the Attendance Log Report link (resolved by text match)
                 var clickResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
                     (function() {
                         try {
-                            var attendanceLogLink = document.getElementById('TempleteTreeViewt22');
-                            if (!attendanceLogLink) {
+                            var anchors = document.querySelectorAll('a');
+                            var target = null;
+                            for (var i = 0; i < anchors.length; i++) {
+                                var text = (anchors[i].textContent || anchors[i].innerText || '').trim();
+                                var id = anchors[i].id || '';
+                                if (text && text.toLowerCase() === 'attendance log report' && id.startsWith('TempleteTreeView')) {
+                                    target = anchors[i];
+                                    break;
+                                }
+                            }
+
+                            if (!target) {
                                 return JSON.stringify({success: false, error: 'Link not found'});
                             }
 
                             // Simulate the click - this should trigger the __doPostBack
-                            attendanceLogLink.click();
+                            target.click();
                             
                             return JSON.stringify({
                                 success: true, 
@@ -3077,8 +3068,12 @@ namespace CybageMISAutomation
 
         private async void BtnFullReport_Click(object sender, RoutedEventArgs e)
         {
+            var wasStartFullAutomationEnabled = btnStartFullAutomation.IsEnabled;
+
             try
             {
+                SetButtonsEnabled(false);
+                btnStartFullAutomation.IsEnabled = false;
                 btnFullReport.IsEnabled = false;
                 LogMessage("Full Report button triggered: running complete automation chain...");
                 await RunFullCalendarAutomation();
@@ -3090,6 +3085,8 @@ namespace CybageMISAutomation
             }
             finally
             {
+                SetButtonsEnabled(true);
+                btnStartFullAutomation.IsEnabled = wasStartFullAutomationEnabled;
                 btnFullReport.IsEnabled = true;
             }
         }
@@ -3143,9 +3140,6 @@ namespace CybageMISAutomation
                 LogMessage($"[DAILY] Navigating to MIS for {dayType}...");
                 webView.CoreWebView2.Navigate(_config.MisUrl);
                 await WaitForPageLoad();
-                
-                LogMessage($"[DAILY] Expanding tree for {dayType}...");
-                await ExecuteExpandTree();
                 
                 LogMessage($"[DAILY] Clicking swipe log for {dayType}...");
                 await ExecuteClickSwipeLog();
