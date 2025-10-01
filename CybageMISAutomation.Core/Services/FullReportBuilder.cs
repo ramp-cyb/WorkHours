@@ -50,7 +50,6 @@ namespace CybageMISAutomation.Services
                 foreach (var c in src)
                 {
                     var d = c.Date.Date;
-                    if (d.Year != year || d.Month != month) continue;
                     var hours = c.WorkingHoursDisplay ?? c.TotalWorkingHoursDisplay ?? string.Empty;
                     var hoursDec = ParseHoursToDecimal(hours);
                     if (dict.TryGetValue(d, out var existing))
@@ -91,7 +90,12 @@ namespace CybageMISAutomation.Services
 
             var vm = new FullReportViewModel { Year = year, Month = month };
             var firstOfMonth = new DateTime(year, month, 1);
-            int daysInMonth = DateTime.DaysInMonth(year, month);
+            var lastOfMonth = firstOfMonth.AddMonths(1).AddDays(-1);
+            var finalDate = dict.Keys.Any() ? dict.Keys.Max() : lastOfMonth;
+            if (finalDate < lastOfMonth)
+            {
+                finalDate = lastOfMonth;
+            }
             int leadingBlanks = ((int)firstOfMonth.DayOfWeek + 6) % 7;
 
             var allDays = new List<DayCalendarItem>();
@@ -99,9 +103,10 @@ namespace CybageMISAutomation.Services
             {
                 allDays.Add(new DayCalendarItem { IsPlaceholder = true });
             }
-            for (int day = 1; day <= daysInMonth; day++)
+            var cursor = firstOfMonth;
+            while (cursor <= finalDate)
             {
-                var date = new DateTime(year, month, day);
+                var date = cursor;
                 if (!dict.TryGetValue(date, out var item))
                 {
                     item = new DayCalendarItem
@@ -123,6 +128,7 @@ namespace CybageMISAutomation.Services
                     }
                 }
                 allDays.Add(item);
+                cursor = cursor.AddDays(1);
             }
 
             while (allDays.Count % 7 != 0) allDays.Add(new DayCalendarItem { IsPlaceholder = true });
