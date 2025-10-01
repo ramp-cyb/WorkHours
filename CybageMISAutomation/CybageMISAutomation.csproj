@@ -38,6 +38,10 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CybageMISAutomation.Core\CybageMISAutomation.Core.csproj" />
+  </ItemGroup>
+
   <!-- Exclude unused language resources to save space -->
   <ItemGroup>
     <SatelliteResourceLanguages Include="en" />
