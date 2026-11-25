@@ -697,6 +697,9 @@ namespace CybageMISAutomation
                 UpdateStatus("Setting up report parameters and generating report...", 40);
                 LogMessage("Starting report generation process...");
 
+                // Select the requested employee before setting the day
+                await SelectEmployeeInSwipeLogReport();
+
                 // Get the selected report type from UI
                 var selectedItem = cmbReportType.SelectedItem as ComboBoxItem;
                 var reportTypeValue = selectedItem?.Tag?.ToString() ?? "1"; // Default to Today
@@ -1695,12 +1698,102 @@ namespace CybageMISAutomation
             await CallManualGenerateReportFunction();
         }
 
+        /// <summary>
+        /// Selects the employee from txtEmployeeId in the swipe log report's employee dropdown
+        /// (EmployeeIDDropDownList*). Options look like "Name - 1476" with value "1476".
+        /// </summary>
+        private async Task SelectEmployeeInSwipeLogReport()
+        {
+            var targetEmployeeId = (txtEmployeeId.Text ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(targetEmployeeId))
+            {
+                LogMessage("⚠ No Employee ID entered - using the page's default employee selection");
+                return;
+            }
+
+            LogMessage($"Selecting employee '{targetEmployeeId}' in swipe log report...");
+            var jsTargetId = JsonConvert.SerializeObject(targetEmployeeId);
+
+            var result = await webView.CoreWebView2.ExecuteScriptAsync($@"
+                (function() {{
+                    try {{
+                        var dd = document.getElementById('EmployeeIDDropDownList7322') ||
+                                 document.querySelector('select[id^=""EmployeeIDDropDownList""]') ||
+                                 document.querySelector('select[title=""EmployeeID""]');
+                        if (!dd) {{
+                            return JSON.stringify({{success: false, error: 'Employee dropdown not found'}});
+                        }}
+
+                        var targetId = {jsTargetId};
+                        var previousValue = dd.value;
+                        var matchIndex = -1;
+
+                        // 1) Exact value match
+                        for (var i = 0; i < dd.options.length; i++) {{
+                            if ((dd.options[i].value || '').trim() === targetId) {{ matchIndex = i; break; }}
+                        }}
+                        // 2) Text ends with '- <id>' (e.g. 'Ramkrishna Pawar - 1476')
+                        if (matchIndex < 0) {{
+                            for (var j = 0; j < dd.options.length; j++) {{
+                                var parts = (dd.options[j].text || '').split('-');
+                                if (parts[parts.length - 1].trim() === targetId) {{ matchIndex = j; break; }}
+                            }}
+                        }}
+
+                        if (matchIndex < 0) {{
+                            var available = [];
+                            for (var k = 0; k < Math.min(dd.options.length, 15); k++) {{
+                                available.push(dd.options[k].value + ' | ' + dd.options[k].text);
+                            }}
+                            return JSON.stringify({{success: false, error: 'Employee ' + targetId + ' not found in dropdown', available: available}});
+                        }}
+
+                        dd.selectedIndex = matchIndex;
+                        dd.dispatchEvent(new Event('change', {{ bubbles: true }}));
+
+                        return JSON.stringify({{
+                            success: true,
+                            previousValue: previousValue,
+                            finalValue: dd.value,
+                            selectedText: dd.options[dd.selectedIndex].text,
+                            selectionChanged: previousValue !== dd.value
+                        }});
+                    }} catch (ex) {{
+                        return JSON.stringify({{success: false, error: ex.message}});
+                    }}
+                }})()
+            ");
+
+            var info = JsonConvert.DeserializeObject<dynamic>(result.Trim('"').Replace("\\\"", "\""));
+            if (!(bool)info.success)
+            {
+                LogMessage($"ERROR selecting employee: {info.error}");
+                if (info.available != null)
+                {
+                    LogMessage("Available employees:");
+                    foreach (var opt in info.available)
+                        LogMessage($"  - {opt}");
+                }
+                throw new Exception($"Failed to select employee: {info.error}");
+            }
+
+            LogMessage($"✓ Employee selected: '{info.selectedText}' (Value: {info.finalValue})");
+            if ((bool)info.selectionChanged)
+            {
+                LogMessage($"  Changed from '{info.previousValue}' to '{info.finalValue}'");
+                await Task.Delay(1000); // let any change handlers finish
+            }
+        }
+
         private async Task CallManualGenerateReportFunction()
         {
             try
             {
                 UpdateStatus("Setting up report parameters and generating report...", 40);
                 LogMessage("Starting report generation process...");
+
+                // Select the requested employee before setting the day
+                await SelectEmployeeInSwipeLogReport();
 
                 // Get the selected report type from UI (same as manual)
                 var selectedItem = cmbReportType.SelectedItem as ComboBoxItem;
@@ -2158,7 +2251,7 @@ namespace CybageMISAutomation
                 UpdateStatus("Selecting employee in attendance report...", 50);
                 LogMessage("Starting employee selection process...");
 
-                var targetEmployeeId = txtEmployeeId.Text;
+                var targetEmployeeId = (txtEmployeeId.Text ?? string.Empty).Trim();
                 LogMessage($"Looking for employee with ID: {targetEmployeeId}");
 
                 // Step 1: Find and verify the employee dropdown exists
@@ -2250,19 +2343,27 @@ namespace CybageMISAutomation
                             var selectedOption = null;
                             var previousIndex = employeeDropdown.selectedIndex;
                             
-                            // Search through all options for ID match (as substring)
+                            // Exact ID match: option value first, then the ID after the last '-' in the text
+                            // (e.g. 'Ramkrishna Pawar - 1476'), so '1476' never matches '14760'.
+                            var matchIndex = -1;
                             for (var i = 0; i < employeeDropdown.options.length; i++) {{
-                                var option = employeeDropdown.options[i];
-                                if (option.text.includes(targetId) || option.value.includes(targetId)) {{
-                                    employeeDropdown.selectedIndex = i;
-                                    selectedOption = {{
-                                        value: option.value,
-                                        text: option.text,
-                                        index: i
-                                    }};
-                                    found = true;
-                                    break;
+                                if ((employeeDropdown.options[i].value || '').trim() === targetId) {{ matchIndex = i; break; }}
+                            }}
+                            if (matchIndex < 0) {{
+                                for (var j = 0; j < employeeDropdown.options.length; j++) {{
+                                    var parts = (employeeDropdown.options[j].text || '').split('-');
+                                    if (parts[parts.length - 1].trim() === targetId) {{ matchIndex = j; break; }}
                                 }}
+                            }}
+                            if (matchIndex >= 0) {{
+                                var option = employeeDropdown.options[matchIndex];
+                                employeeDropdown.selectedIndex = matchIndex;
+                                selectedOption = {{
+                                    value: option.value,
+                                    text: option.text,
+                                    index: matchIndex
+                                }};
+                                found = true;
                             }}
                             
                             if (found) {{
