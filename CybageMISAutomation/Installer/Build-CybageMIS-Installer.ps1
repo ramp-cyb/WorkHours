@@ -45,6 +45,8 @@ $wxsContent = @"
            Compressed="yes">
     
     <SummaryInformation Description="Cybage MIS Report Automation - All Dependencies" />
+    <!-- Replace any previously installed build (same UpgradeCode) instead of installing side by side -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of Cybage MIS Report Automation is already installed." />
     <Media Id="1" Cabinet="app.cab" EmbedCab="yes" CompressionLevel="high" />
     
     <Feature Id="MainApplication" Title="Cybage MIS Report Automation" Level="1">

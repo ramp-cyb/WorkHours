@@ -82,30 +82,29 @@ namespace CybageMISAutomation
                     _logWindow.Hide();
                 }
                 
-                LogMessage($"Configuration loaded: Employee ID = {_config.EmployeeId}");
+                LogMessage($"Configuration loaded from {ConfigurationService.ConfigFilePath}: Employee ID = {_config.EmployeeId}");
+                if (ConfigurationService.LastLoadError != null)
+                {
+                    LogMessage($"⚠ {ConfigurationService.LastLoadError}");
+                    MessageBox.Show(ConfigurationService.LastLoadError, "Settings Problem",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
                 InitializeWebView();
             }
             catch (Exception ex)
             {
+                // Create the log window first so the failure and everything after it is recorded.
+                _logWindow ??= new LogWindow();
                 LogMessage($"Failed to load configuration: {ex}");
                 MessageBox.Show($"Configuration Error: {ex.Message}\n\nThe application will try to continue with defaults.",
                     "Configuration Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-                
-                // Try to continue with default config
+
+                // Continue with default config; initialize the browser exactly once.
                 _config = new AppConfig();
-                try
-                {
-                    InitializeWebView();
-                }
-                catch (Exception webEx)
-                {
-                    LogMessage($"WebView initialization also failed: {webEx}");
-                    MessageBox.Show($"Critical Error: Cannot initialize browser component.\n\n{webEx.Message}",
-                        "Startup Failed", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-                // Create log window with default setting (hidden)
-                _logWindow = new LogWindow();
-                InitializeWebView();
+                txtEmployeeId.TextChanged -= TxtEmployeeId_TextChanged;
+                txtEmployeeId.TextChanged += TxtEmployeeId_TextChanged;
+                if (!_isWebViewInitialized)
+                    InitializeWebView(); // reports its own failures
             }
         }
 
@@ -204,6 +203,14 @@ namespace CybageMISAutomation
 
         private async void WebView_DOMContentLoaded(object? sender, CoreWebView2DOMContentLoadedEventArgs e)
         {
+            // During automation the running flow owns the status bar and buttons; don't report
+            // intermediate pages as "loaded successfully" or re-enable manual buttons.
+            if (_isAutomationBusy)
+            {
+                LogMessage($"DOM content loaded: {webView.CoreWebView2.Source}");
+                return;
+            }
+
             UpdateStatus("Page DOM loaded. Checking page content...", 70);
             LogMessage("DOM content loaded. Page is ready for interaction.");
 
@@ -302,6 +309,27 @@ namespace CybageMISAutomation
             _logWindow?.AddLogEntry(message);
         }
 
+        /// <summary>
+        /// ExecuteScriptAsync returns the script's value JSON-encoded. Our scripts return
+        /// JSON.stringify(...), so the result is a JSON string literal wrapping JSON text.
+        /// Decode it properly (handles quotes, backslashes, newlines, unicode) instead of
+        /// trimming quotes by hand. A null/undefined result becomes a failure object so
+        /// callers reading .success never hit a null reference.
+        /// </summary>
+        private static string UnwrapScriptJson(string? scriptResult)
+        {
+            const string noResult = "{\"success\":false,\"error\":\"Script returned no result\"}";
+            if (string.IsNullOrWhiteSpace(scriptResult)) return noResult;
+            var trimmed = scriptResult.Trim();
+            if (trimmed == "null" || trimmed == "undefined") return noResult;
+            if (trimmed.StartsWith("\""))
+            {
+                var inner = JsonConvert.DeserializeObject<string>(trimmed);
+                return string.IsNullOrWhiteSpace(inner) ? noResult : inner;
+            }
+            return trimmed; // script returned an object directly
+        }
+
         private void BtnShowLogs_Click(object sender, RoutedEventArgs e)
         {
             if (_logWindow != null)
@@ -334,7 +362,7 @@ namespace CybageMISAutomation
                 LogMessage($"Raw Page Info JSON: {pageInfoJson}");
 
                 // Parse the JSON string (WebView2 returns JSON as a quoted string)
-                var cleanJson = pageInfoJson.Trim('"').Replace("\\\"", "\"");
+                var cleanJson = UnwrapScriptJson(pageInfoJson);
                 var info = JsonConvert.DeserializeObject<dynamic>(cleanJson);
                 
                 LogMessage($"Parsed Page Info: Title='{info.title}', HasTreeView={info.hasTreeView}, LeaveNode={info.leaveManagementNode}");
@@ -402,7 +430,7 @@ namespace CybageMISAutomation
                     })()
                 ");
 
-                var expandCheck = JsonConvert.DeserializeObject<dynamic>(isExpandedResult.Trim('"').Replace("\\\"", "\""));
+                var expandCheck = JsonConvert.DeserializeObject<dynamic>(UnwrapScriptJson(isExpandedResult));
                 LogMessage($"Tree node check: Success={expandCheck.success}, IsExpanded={expandCheck.isExpanded}");
 
                 if (!(bool)expandCheck.success)
@@ -439,7 +467,7 @@ namespace CybageMISAutomation
                         })()
                     ");
 
-                    var clickResponse = JsonConvert.DeserializeObject<dynamic>(clickResult.Trim('"').Replace("\\\"", "\""));
+                    var clickResponse = JsonConvert.DeserializeObject<dynamic>(UnwrapScriptJson(clickResult));
                     LogMessage($"Click result: Success={clickResponse.success}");
 
                     if ((bool)clickResponse.success)
@@ -508,7 +536,7 @@ namespace CybageMISAutomation
                     })()
                 ");
 
-                var swipeLogInfo = JsonConvert.DeserializeObject<dynamic>(swipeLogCheck.Trim('"').Replace("\\\"", "\""));
+                var swipeLogInfo = JsonConvert.DeserializeObject<dynamic>(UnwrapScriptJson(swipeLogCheck));
 
                 if ((bool)swipeLogInfo.found)
                 {
@@ -588,7 +616,7 @@ namespace CybageMISAutomation
                     ");
 
                     var clickResponse = JsonConvert.DeserializeObject<dynamic>(
-                        clickResult.Trim('"').Replace("\\\"", "\""));
+                        UnwrapScriptJson(clickResult));
 
                     if ((bool)clickResponse.success && (bool)clickResponse.clicked)
                     {
@@ -656,7 +684,7 @@ namespace CybageMISAutomation
                 ");
 
                 var pageInfo = JsonConvert.DeserializeObject<dynamic>(
-                    pageVerificationResult.Trim('"').Replace("\\\"", "\""));
+                    UnwrapScriptJson(pageVerificationResult));
 
                 LogMessage($"Page verification - Title: '{pageInfo.title}'");
                 LogMessage($"  Has WizardPanel: {pageInfo.hasWizardPanel}");
@@ -746,7 +774,7 @@ namespace CybageMISAutomation
                 ");
 
                 var dropdownResponse = JsonConvert.DeserializeObject<dynamic>(
-                    dropdownResult.Trim('"').Replace("\\\"", "\""));
+                    UnwrapScriptJson(dropdownResult));
 
                 if ((bool)dropdownResponse.success)
                 {
@@ -799,7 +827,7 @@ namespace CybageMISAutomation
                     ");
 
                     var generateResponse = JsonConvert.DeserializeObject<dynamic>(
-                        generateResult.Trim('"').Replace("\\\"", "\""));
+                        UnwrapScriptJson(generateResult));
 
                     if ((bool)generateResponse.success)
                     {
@@ -878,7 +906,7 @@ namespace CybageMISAutomation
                 ");
 
                 var reportInfo = JsonConvert.DeserializeObject<dynamic>(
-                    reportVerificationResult.Trim('"').Replace("\\\"", "\""));
+                    UnwrapScriptJson(reportVerificationResult));
 
                 LogMessage($"Report verification - Has ReportViewer: {reportInfo.hasReportViewer}");
                 LogMessage($"  Has Report Data: {reportInfo.hasReportData}");
@@ -1063,7 +1091,7 @@ namespace CybageMISAutomation
 
                 var extractResult = await webView.CoreWebView2.ExecuteScriptAsync(extractDataScript);
                 var extractInfo = JsonConvert.DeserializeObject<dynamic>(
-                    extractResult.Trim('"').Replace("\\\"", "\""));
+                    UnwrapScriptJson(extractResult));
 
                 // Log debug information
                 if (extractInfo.debug != null)
@@ -1169,171 +1197,355 @@ namespace CybageMISAutomation
 
         private async void BtnFullAutomation_Click(object sender, RoutedEventArgs e)
         {
-            if (_isFullAutomationRunning)
-            {
-                LogMessage("❌ Full automation is already running. Please wait for completion.");
-                return;
-            }
-
             await StartFullAutomation();
         }
 
         public async Task StartFullAutomation()
         {
+            if (!TryBeginAutomation("Full automation")) return;
             try
             {
-                _isFullAutomationRunning = true;
-                _todayData.Clear();
-                _yesterdayData.Clear();
+                _todayData = new List<SwipeLogEntry>();
+                _yesterdayData = new List<SwipeLogEntry>();
 
-                // Disable all buttons during automation
-                SetButtonsEnabled(false);
-                btnStartFullAutomation.IsEnabled = false;
-
-                LogMessage("🚀 Starting FULL AUTOMATION workflow...");
-                LogMessage("  This will extract both Today and Yesterday data automatically");
+                LogMessage("🚀 Starting FULL AUTOMATION workflow (Today + Yesterday)...");
                 UpdateStatus("Full automation started...", 0);
 
-                // Phase 1: Extract Today's Data
                 LogMessage("📅 PHASE 1: Extracting Today's Data");
-                await ExecuteTodayAutomation();
+                _todayData = await RunDailyReportAsync(isToday: true);
 
-                if (_todayData.Count == 0)
-                {
-                    LogMessage("⚠ Warning: No data extracted for Today. Continuing with Yesterday...");
-                }
-
-                // Wait before starting yesterday automation
-                await Task.Delay(2000);
-
-                // Phase 2: Extract Yesterday's Data  
                 LogMessage("📅 PHASE 2: Extracting Yesterday's Data");
-                await ExecuteYesterdayAutomation();
+                _yesterdayData = await RunDailyReportAsync(isToday: false);
 
-                if (_yesterdayData.Count == 0)
-                {
-                    LogMessage("⚠ Warning: No data extracted for Yesterday.");
-                }
-
-                // Phase 3: Show Comparison Results
                 LogMessage("📊 PHASE 3: Displaying Results");
                 ShowComparisonResults();
 
-                LogMessage($"✅ FULL AUTOMATION COMPLETED!");
-                LogMessage($"  Today: {_todayData.Count} records");
-                LogMessage($"  Yesterday: {_yesterdayData.Count} records");
-                UpdateStatus($"Full automation completed - Today: {_todayData.Count}, Yesterday: {_yesterdayData.Count}", 100);
+                LogMessage($"✅ FULL AUTOMATION COMPLETED - Today: {_todayData.Count} swipes, Yesterday: {_yesterdayData.Count} swipes");
+                UpdateStatus($"Full automation completed - Today: {_todayData.Count}, Yesterday: {_yesterdayData.Count} swipes", 100);
             }
             catch (Exception ex)
             {
                 LogMessage($"❌ FULL AUTOMATION FAILED: {ex.Message}");
-                UpdateStatus("Full automation failed", 0);
+                UpdateStatus($"Full automation failed: {ex.Message}", 0);
                 MessageBox.Show($"Full automation failed: {ex.Message}", "Automation Error",
                                 MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
-                _isFullAutomationRunning = false;
-                SetButtonsEnabled(true);
-                btnStartFullAutomation.IsEnabled = true;
+                EndAutomation();
             }
         }
 
-        private async Task ExecuteTodayAutomation()
+        #region Busy guard
+
+        private bool _isAutomationBusy = false;
+
+        /// <summary>
+        /// Only one automation may drive the WebView at a time. Returns false (and tells the user)
+        /// when another run is in progress.
+        /// </summary>
+        private bool TryBeginAutomation(string what)
         {
-            try
+            if (_isAutomationBusy)
             {
-                // Step 1: Navigate to main page
-                LogMessage("1️⃣ Navigating to main page...");
-                webView.CoreWebView2.Navigate(_config.MisUrl);
-                await WaitForPageLoad();
-
-                // Step 2: Click swipe log link directly (no tree expansion)
-                LogMessage("2️⃣ Clicking swipe log link...");
-                await ExecuteClickSwipeLog();
-
-                // Step 3: Select Today
-                LogMessage("3️⃣ Selecting Today from dropdown...");
-                cmbReportType.SelectedIndex = 0; // Today
-                await Task.Delay(500);
-
-                // Step 4: Generate report
-                LogMessage("4️⃣ Generating Today's report...");
-                await ExecuteGenerateReport();
-
-                // Step 5: Extract data
-                LogMessage("5️⃣ Extracting Today's data...");
-                _todayData = await ExecuteDataExtraction();
-                LogMessage($"  ✅ Today's data extracted: {_todayData.Count} records");
+                LogMessage($"❌ {what} not started: another automation is already running.");
+                UpdateStatus("Another automation is already running - please wait for it to finish.", (int)progressBar.Value);
+                return false;
             }
-            catch (Exception ex)
-            {
-                LogMessage($"❌ Error in Today automation: {ex.Message}");
-                throw;
-            }
+            _isAutomationBusy = true;
+            _isFullAutomationRunning = true;
+            SetButtonsEnabled(false);
+            btnStartFullAutomation.IsEnabled = false;
+            if (this.FindName("btnFullReport") is Button fr) fr.IsEnabled = false;
+            return true;
         }
 
-        private async Task ExecuteYesterdayAutomation()
+        private void EndAutomation()
         {
-            try
-            {
-                // Step 7: Reset to main page
-                LogMessage("7️⃣ Resetting to main page...");
-                webView.CoreWebView2.Navigate(_config.MisUrl);
-                await WaitForPageLoad();
-
-                // Step 8: Click swipe log link (no tree expansion)
-                LogMessage("8️⃣ Clicking swipe log link...");
-                await ExecuteClickSwipeLog();
-
-                // Step 9: Select Yesterday
-                LogMessage("9️⃣ Selecting Yesterday from dropdown...");
-                cmbReportType.SelectedIndex = 1; // Yesterday
-                await Task.Delay(500);
-
-                // Step 10: Generate report
-                LogMessage("🔟 Generating Yesterday's report...");
-                await ExecuteGenerateReport();
-
-                // Step 11: Extract data
-                LogMessage("1️⃣1️⃣ Extracting Yesterday's data...");
-                _yesterdayData = await ExecuteDataExtraction();
-                LogMessage($"  ✅ Yesterday's data extracted: {_yesterdayData.Count} records");
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"❌ Error in Yesterday automation: {ex.Message}");
-                throw;
-            }
+            _isAutomationBusy = false;
+            _isFullAutomationRunning = false;
+            SetButtonsEnabled(true);
+            btnStartFullAutomation.IsEnabled = true;
+            if (this.FindName("btnFullReport") is Button fr) fr.IsEnabled = _isWebViewInitialized;
         }
 
-        private async Task<List<SwipeLogEntry>> ExecuteDataExtraction()
-        {
-            // Reuse the existing data extraction logic but return the data instead of showing window
-            var extractResult = await webView.CoreWebView2.ExecuteScriptAsync(GetDataExtractionScript());
-            var extractInfo = JsonConvert.DeserializeObject<dynamic>(
-                extractResult.Trim('"').Replace("\\\"", "\""));
+        #endregion
 
-            var entries = new List<SwipeLogEntry>();
-            
-            if ((bool)extractInfo.success)
+        #region Reliable page waiting
+
+        /// <summary>
+        /// Stamps the current document (and any report tables) with a token so we can tell
+        /// when a navigation or postback has actually replaced it.
+        /// </summary>
+        private async Task<string> MarkCurrentPageAsync()
+        {
+            var token = Guid.NewGuid().ToString("N");
+            await webView.CoreWebView2.ExecuteScriptAsync(
+                "window.__cmisPage = '" + token + "';" +
+                "(function(){var rv=document.getElementById('ReportViewer1');" +
+                "if(rv){var t=rv.querySelectorAll('table');for(var i=0;i<t.length;i++){t[i].setAttribute('data-cmis-stale','" + token + "');}}})();" +
+                "true;");
+            return token;
+        }
+
+        /// <summary>
+        /// Polls until the page is no longer the one marked with <paramref name="oldToken"/>
+        /// (new document, or the report area was re-rendered by an async postback), the document
+        /// has finished loading, and <paramref name="jsCondition"/> is true. Throws on timeout.
+        /// </summary>
+        private async Task WaitForFreshPageAsync(string oldToken, string jsCondition, string what, int timeoutMs = 60000)
+        {
+            var script =
+                "(function(){try{" +
+                "if(document.readyState!=='complete')return false;" +
+                "if(window.__cmisPage==='" + oldToken + "'){" +
+                "var rv=document.getElementById('ReportViewer1');" +
+                "if(!rv||!rv.querySelector('table:not([data-cmis-stale])'))return false;}" +
+                "return !!(" + jsCondition + ");" +
+                "}catch(e){return false;}})()";
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < timeoutMs)
             {
-                foreach (var entry in (Newtonsoft.Json.Linq.JArray)extractInfo.entries)
+                try
                 {
-                    entries.Add(new SwipeLogEntry
+                    if (await webView.CoreWebView2.ExecuteScriptAsync(script) == "true")
                     {
-                        EmployeeId = entry["employeeId"]?.ToString() ?? "",
-                        Date = entry["date"]?.ToString() ?? "",
-                        MachineName = entry["machineName"]?.ToString() ?? "",
-                        Direction = entry["direction"]?.ToString() ?? "",
-                        Time = entry["time"]?.ToString() ?? "",
-                        Activity = "" // Will be set later by ComparisonWindow labeling  
-                    });
+                        LogMessage($"✓ {what} ready after {sw.ElapsedMilliseconds / 1000.0:F1}s");
+                        return;
+                    }
                 }
+                catch (Exception ex)
+                {
+                    // Script execution can fail transiently while a navigation is in flight.
+                    LogMessage($"  (waiting for {what}: {ex.Message})");
+                }
+                await Task.Delay(400);
             }
-            
-            return entries;
+
+            throw new TimeoutException($"Timed out after {timeoutMs / 1000}s waiting for {what}. Current page: {webView.CoreWebView2.Source}");
         }
+
+        private const string JsMisHomeReady = "document.getElementById('TempleteTreeView')!==null";
+        private const string JsSwipeReportFormReady =
+            "document.getElementById('DayDropDownList8665')!==null && document.getElementById('ViewReportImageButton')!==null && " +
+            "(document.getElementById('EmployeeIDDropDownList7322')!==null || document.querySelector('select[id^=\"EmployeeIDDropDownList\"]')!==null)";
+        private const string JsAttendanceFormReady =
+            "document.querySelector('select[name*=\"Employee\"], select[id*=\"Employee\"], select[id*=\"employee\"], select[name*=\"EMP\"]')!==null";
+        private const string JsReportViewerPresent = "document.getElementById('ReportViewer1')!==null";
+
+        private async Task NavigateToMisHomeAsync()
+        {
+            var token = await MarkCurrentPageAsync();
+            LogMessage($"Navigating to MIS home: {_config.MisUrl}");
+            webView.CoreWebView2.Navigate(_config.MisUrl);
+            await WaitForFreshPageAsync(token, JsMisHomeReady, "MIS home page (report tree)");
+        }
+
+        #endregion
+
+        #region Daily swipe-log report (Today / Yesterday)
+
+        /// <summary>
+        /// Runs the "Today's and Yesterday's Swipe Log" report for one day and returns its rows.
+        /// Throws on any failure; an empty list means the report rendered and had no swipes.
+        /// </summary>
+        private async Task<List<SwipeLogEntry>> RunDailyReportAsync(bool isToday)
+        {
+            var label = isToday ? "Today" : "Yesterday";
+            var expectedDate = isToday ? DateTime.Today : DateTime.Today.AddDays(-1);
+            var employeeId = RequireEmployeeId();
+
+            try
+            {
+                UpdateStatus($"{label}: opening MIS...", 10);
+                await NavigateToMisHomeAsync();
+
+                UpdateStatus($"{label}: opening swipe log report...", 30);
+                await OpenSwipeLogReportAsync();
+
+                UpdateStatus($"{label}: generating report...", 50);
+                cmbReportType.SelectedIndex = isToday ? 0 : 1; // keep the UI in sync
+                await GenerateSwipeLogReportAsync(isToday ? "1" : "0", label);
+
+                UpdateStatus($"{label}: reading swipe rows...", 80);
+                var entries = await ExtractSwipeLogAsync(expectedDate, employeeId, label);
+                LogMessage($"✅ {label}: {entries.Count} swipe rows for {expectedDate:dd-MMM-yyyy}");
+                return entries;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{label} swipe log failed: {ex.Message}", ex);
+            }
+        }
+
+        private string RequireEmployeeId()
+        {
+            var id = (txtEmployeeId.Text ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(id))
+                throw new InvalidOperationException("Employee ID is empty. Enter your Employee ID first.");
+            return id;
+        }
+
+        private async Task OpenSwipeLogReportAsync()
+        {
+            var token = await MarkCurrentPageAsync();
+            var clickResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
+                (function() {
+                    try {
+                        var anchors = document.querySelectorAll('a');
+                        for (var i = 0; i < anchors.length; i++) {
+                            var text = (anchors[i].textContent || anchors[i].innerText || '').trim().toLowerCase();
+                            var id = anchors[i].id || '';
+                            if (text === ""today's and yesterday's swipe log"" && id.indexOf('TempleteTreeView') === 0) {
+                                anchors[i].click();
+                                return JSON.stringify({success: true});
+                            }
+                        }
+                        return JSON.stringify({success: false, error: ""'Today's and Yesterday's Swipe Log' link not found in the report tree""});
+                    } catch (ex) {
+                        return JSON.stringify({success: false, error: ex.message});
+                    }
+                })()
+            ");
+            var click = JsonConvert.DeserializeObject<dynamic>(UnwrapScriptJson(clickResult));
+            if (!(bool)click.success)
+                throw new Exception((string)click.error);
+
+            LogMessage("✓ Swipe log link clicked");
+            await WaitForFreshPageAsync(token, JsSwipeReportFormReady, "swipe log report form");
+            btnGenerateReport.IsEnabled = true;
+        }
+
+        private async Task GenerateSwipeLogReportAsync(string dayValue, string label)
+        {
+            await SelectEmployeeInSwipeLogReport();
+
+            var dayResult = await webView.CoreWebView2.ExecuteScriptAsync($@"
+                (function() {{
+                    try {{
+                        var dd = document.getElementById('DayDropDownList8665');
+                        if (!dd) return JSON.stringify({{success: false, error: 'Day dropdown not found'}});
+                        var target = {JsonConvert.SerializeObject(dayValue)};
+                        var exists = false;
+                        for (var i = 0; i < dd.options.length; i++) if (dd.options[i].value === target) exists = true;
+                        if (!exists) return JSON.stringify({{success: false, error: 'Day option ' + target + ' not in dropdown'}});
+                        dd.value = target;
+                        dd.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                        return JSON.stringify({{success: dd.value === target, finalValue: dd.value,
+                            selectedText: dd.options[dd.selectedIndex].text, error: 'Day dropdown did not accept value ' + target}});
+                    }} catch (ex) {{
+                        return JSON.stringify({{success: false, error: ex.message}});
+                    }}
+                }})()
+            ");
+            var day = JsonConvert.DeserializeObject<dynamic>(UnwrapScriptJson(dayResult));
+            if (!(bool)day.success)
+                throw new Exception($"Could not select '{label}' in Day dropdown: {day.error}");
+            LogMessage($"✓ Day set to '{day.selectedText}' (value {day.finalValue})");
+
+            var token = await MarkCurrentPageAsync();
+            var genResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
+                (function() {
+                    var b = document.getElementById('ViewReportImageButton');
+                    if (!b) return JSON.stringify({success: false, error: 'Generate Report button (ViewReportImageButton) not found'});
+                    if (b.disabled || window.getComputedStyle(b).display === 'none')
+                        return JSON.stringify({success: false, error: 'Generate Report button is disabled or hidden'});
+                    b.click();
+                    return JSON.stringify({success: true});
+                })()
+            ");
+            var gen = JsonConvert.DeserializeObject<dynamic>(UnwrapScriptJson(genResult));
+            if (!(bool)gen.success)
+                throw new Exception((string)gen.error);
+
+            LogMessage("✓ Generate Report clicked - waiting for the report...");
+            await WaitForFreshPageAsync(token, JsReportViewerPresent, $"{label} report");
+        }
+
+        /// <summary>
+        /// Reads swipe rows from the freshly generated report, waiting for asynchronous rendering.
+        /// Validates every row belongs to the requested employee and date so a stale or wrong
+        /// page can never be counted silently.
+        /// </summary>
+        private async Task<List<SwipeLogEntry>> ExtractSwipeLogAsync(DateTime expectedDate, string employeeId, string label,
+            int timeoutMs = 45000, int emptySettleMs = 8000)
+        {
+            const string jsRendering =
+                "(function(){var w=document.querySelector('[id$=\"AsyncWait\"],[id*=\"AsyncWait_Wait\"]');" +
+                "if(!w)return false;var s=window.getComputedStyle(w);return s.display!=='none'&&s.visibility!=='hidden';})()";
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            long settledSince = -1;
+            string lastError = "no report table yet";
+
+            while (sw.ElapsedMilliseconds < timeoutMs)
+            {
+                var raw = await webView.CoreWebView2.ExecuteScriptAsync(GetDataExtractionScript());
+                var info = JsonConvert.DeserializeObject<dynamic>(UnwrapScriptJson(raw));
+
+                if ((bool)info.success && ((Newtonsoft.Json.Linq.JArray)info.entries).Count > 0)
+                {
+                    var entries = new List<SwipeLogEntry>();
+                    foreach (var entry in (Newtonsoft.Json.Linq.JArray)info.entries)
+                    {
+                        entries.Add(new SwipeLogEntry
+                        {
+                            EmployeeId = entry["employeeId"]?.ToString() ?? "",
+                            Date = entry["date"]?.ToString() ?? "",
+                            MachineName = entry["machineName"]?.ToString() ?? "",
+                            Direction = entry["direction"]?.ToString() ?? "",
+                            Time = entry["time"]?.ToString() ?? "",
+                        });
+                    }
+                    ValidateSwipeRows(entries, expectedDate, employeeId, label);
+                    return entries;
+                }
+
+                lastError = (string?)info.error ?? "report table has no swipe rows";
+
+                // No rows yet. Once the report viewer has stopped rendering and stayed that way
+                // for a while, accept that the day genuinely has no swipes.
+                bool rendering = await webView.CoreWebView2.ExecuteScriptAsync(jsRendering) == "true";
+                bool viewerPresent = await webView.CoreWebView2.ExecuteScriptAsync(JsReportViewerPresent) == "true";
+                if (viewerPresent && !rendering)
+                {
+                    if (settledSince < 0) settledSince = sw.ElapsedMilliseconds;
+                    if (sw.ElapsedMilliseconds - settledSince >= emptySettleMs)
+                    {
+                        LogMessage($"ℹ {label}: report finished rendering with no swipe rows ({lastError}) - treating as no swipes for {expectedDate:dd-MMM-yyyy}");
+                        return new List<SwipeLogEntry>();
+                    }
+                }
+                else
+                {
+                    settledSince = -1;
+                }
+
+                await Task.Delay(1000);
+            }
+
+            throw new TimeoutException($"Report did not show swipe rows within {timeoutMs / 1000}s ({lastError})");
+        }
+
+        private void ValidateSwipeRows(List<SwipeLogEntry> entries, DateTime expectedDate, string employeeId, string label)
+        {
+            var badDate = entries.FirstOrDefault(e => WorkHoursCalculator.ParseDate(e.Date) == null);
+            if (badDate != null)
+                throw new Exception($"Unrecognised date '{badDate.Date}' in {label} swipe log (row: {badDate.EmployeeId} | {badDate.Date} | {badDate.MachineName}). The report layout may have changed.");
+
+            var wrongDate = entries.Where(e => WorkHoursCalculator.ParseDate(e.Date) != expectedDate.Date)
+                                   .Select(e => e.Date).Distinct().ToList();
+            if (wrongDate.Count > 0)
+                throw new Exception($"{label} report shows date(s) {string.Join(", ", wrongDate)} but {expectedDate:dd-MMM-yyyy} was requested (stale or wrong report page).");
+
+            var wrongEmployee = entries.Where(e => !string.Equals(e.EmployeeId.Trim(), employeeId, StringComparison.OrdinalIgnoreCase))
+                                       .Select(e => e.EmployeeId).Distinct().ToList();
+            if (wrongEmployee.Count > 0)
+                throw new Exception($"{label} report contains employee(s) {string.Join(", ", wrongEmployee)} but {employeeId} was requested.");
+        }
+
+        #endregion
 
         private string GetDataExtractionScript()
         {
@@ -1490,37 +1702,6 @@ namespace CybageMISAutomation
                 frBtnToggle.IsEnabled = enabled && _monthlyReportCache.Count > 0;
         }
 
-        private async Task WaitForPageLoad()
-        {
-            // Wait for navigation to complete with proper detection
-            var maxWaitTime = 15000; // 15 seconds
-            var checkInterval = 500; // 0.5 seconds
-            var elapsed = 0;
-
-            while (elapsed < maxWaitTime)
-            {
-                try
-                {
-                    var readyState = await webView.CoreWebView2.ExecuteScriptAsync("document.readyState");
-                    if (readyState.Trim('"') == "complete")
-                    {
-                        LogMessage("Page loading completed successfully");
-                        await Task.Delay(1000); // Additional wait for dynamic content
-                        return;
-                    }
-                }
-                catch
-                {
-                    // Continue waiting if script execution fails
-                }
-
-                await Task.Delay(checkInterval);
-                elapsed += checkInterval;
-            }
-
-            LogMessage("⚠ Page load timeout - continuing anyway");
-        }
-
         // Removed old wait methods - now using the same completion detection as manual mode
 
         private async Task ExecuteExpandTree()
@@ -1559,7 +1740,7 @@ namespace CybageMISAutomation
                     })()
                 ");
 
-                var expandCheck = JsonConvert.DeserializeObject<dynamic>(isExpandedResult.Trim('"').Replace("\\\"", "\""));
+                var expandCheck = JsonConvert.DeserializeObject<dynamic>(UnwrapScriptJson(isExpandedResult));
                 LogMessage($"Tree node check: Success={expandCheck.success}, IsExpanded={expandCheck.isExpanded}");
 
                 if (!(bool)expandCheck.success)
@@ -1595,7 +1776,7 @@ namespace CybageMISAutomation
                         })()
                     ");
 
-                    var clickResponse = JsonConvert.DeserializeObject<dynamic>(clickResult.Trim('"').Replace("\\\"", "\""));
+                    var clickResponse = JsonConvert.DeserializeObject<dynamic>(UnwrapScriptJson(clickResult));
                     LogMessage($"Click result: Success={clickResponse.success}");
 
                     if ((bool)clickResponse.success)
@@ -1624,92 +1805,13 @@ namespace CybageMISAutomation
         }
 
 
-        private async Task ExecuteClickSwipeLog()
-        {
-            try
-            {
-                UpdateStatus("Clicking 'Today's and Yesterday's Swipe Log' link...", 30);
-                LogMessage("Starting swipe log link click process...");
-
-               
-                // Click the swipe log link (same as manual)
-                var clickResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
-                    (function() {
-                        try {
-                            var anchors = document.querySelectorAll('a');
-                            var target = null;
-                            for (var i = 0; i < anchors.length; i++) {
-                                var text = (anchors[i].textContent || anchors[i].innerText || '').trim();
-                                var id = anchors[i].id || '';
-                                if (text && text.toLowerCase() === ""today's and yesterday's swipe log"" && id.startsWith('TempleteTreeView')) {
-                                    target = anchors[i];
-                                    break;
-                                }
-                            }
-
-                            if (!target) {
-                                return JSON.stringify({success: false, error: 'swipe log Link not found'});
-                            }
-
-                            // Simulate the click - this should trigger the __doPostBack
-                            target.click();
-                            
-                            return JSON.stringify({
-                                success: true, 
-                                message: 'Swipe log link clicked successfully'
-                            });
-                        } catch (ex) {
-                            return JSON.stringify({success: false, error: ex.message});
-                        }
-                    })()
-                ");
-
-                var clickResponse = JsonConvert.DeserializeObject<dynamic>(
-                    clickResult.Trim('"').Replace("\\\"", "\""));
-
-                if ((bool)clickResponse.success)
-                {
-                    LogMessage("✓ Swipe Log link clicked successfully");
-                    UpdateStatus("Waiting for report page to load...", 60);
-
-                    // Wait for the page to navigate/change after the postback (same as manual)
-                    await Task.Delay(3000);
-
-                    // Verify we've navigated to the report configuration page (same as manual)
-                    await VerifyReportPage();
-                }
-                else
-                {
-                    LogMessage($"ERROR clicking swipe log link: {clickResponse.error}");
-                    throw new Exception($"Swipe log click failed: {clickResponse.error}");
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"ERROR: Swipe log click failed - {ex.Message}");
-                throw;
-            }
-        }
-
-        private async Task ExecuteGenerateReport()
-        {
-            // Call the SAME function that works in manual mode  
-            LogMessage("📊 Calling manual report generation function...");
-            await CallManualGenerateReportFunction();
-        }
-
         /// <summary>
         /// Selects the employee from txtEmployeeId in the swipe log report's employee dropdown
         /// (EmployeeIDDropDownList*). Options look like "Name - 1476" with value "1476".
         /// </summary>
         private async Task SelectEmployeeInSwipeLogReport()
         {
-            var targetEmployeeId = (txtEmployeeId.Text ?? string.Empty).Trim();
-            if (string.IsNullOrEmpty(targetEmployeeId))
-            {
-                LogMessage("⚠ No Employee ID entered - using the page's default employee selection");
-                return;
-            }
+            var targetEmployeeId = RequireEmployeeId();
 
             LogMessage($"Selecting employee '{targetEmployeeId}' in swipe log report...");
             var jsTargetId = JsonConvert.SerializeObject(targetEmployeeId);
@@ -1764,7 +1866,7 @@ namespace CybageMISAutomation
                 }})()
             ");
 
-            var info = JsonConvert.DeserializeObject<dynamic>(result.Trim('"').Replace("\\\"", "\""));
+            var info = JsonConvert.DeserializeObject<dynamic>(UnwrapScriptJson(result));
             if (!(bool)info.success)
             {
                 LogMessage($"ERROR selecting employee: {info.error}");
@@ -1785,143 +1887,15 @@ namespace CybageMISAutomation
             }
         }
 
-        private async Task CallManualGenerateReportFunction()
-        {
-            try
-            {
-                UpdateStatus("Setting up report parameters and generating report...", 40);
-                LogMessage("Starting report generation process...");
-
-                // Select the requested employee before setting the day
-                await SelectEmployeeInSwipeLogReport();
-
-                // Get the selected report type from UI (same as manual)
-                var selectedItem = cmbReportType.SelectedItem as ComboBoxItem;
-                var reportTypeValue = selectedItem?.Tag?.ToString() ?? "1"; // Default to Today
-                var reportTypeName = selectedItem?.Content?.ToString() ?? "Today";
-
-                LogMessage($"Selected report type: {reportTypeName} (Value: {reportTypeValue})");
-
-                // First, set the day dropdown selection (same as manual)
-                var dropdownResult = await webView.CoreWebView2.ExecuteScriptAsync($@"
-                    (function() {{
-                        try {{
-                            var dayDropdown = document.getElementById('DayDropDownList8665');
-                            if (!dayDropdown) {{
-                                return JSON.stringify({{success: false, error: 'Day dropdown not found'}});
-                            }}
-
-                            // Check current selection
-                            var currentValue = dayDropdown.value;
-                            var targetValue = '{reportTypeValue}'; // 1 = Today, 0 = Yesterday
-                            
-                            // Set the dropdown value
-                            dayDropdown.value = targetValue;
-                            
-                            // Trigger change event to ensure any JavaScript handlers are called
-                            var changeEvent = new Event('change', {{ bubbles: true }});
-                            dayDropdown.dispatchEvent(changeEvent);
-
-                            // Verify the selection was set
-                            var finalValue = dayDropdown.value;
-                            var selectedText = dayDropdown.options[dayDropdown.selectedIndex].text;
-
-                            return JSON.stringify({{
-                                success: true,
-                                previousValue: currentValue,
-                                targetValue: targetValue,
-                                finalValue: finalValue,
-                                selectedText: selectedText,
-                                selectionChanged: currentValue !== finalValue
-                            }});
-                        }} catch (ex) {{
-                            return JSON.stringify({{success: false, error: ex.message}});
-                        }}
-                    }})()
-                ");
-
-                var dropdownInfo = JsonConvert.DeserializeObject<dynamic>(
-                    dropdownResult.Trim('"').Replace("\\\"", "\""));
-
-                if (!(bool)dropdownInfo.success)
-                {
-                    LogMessage($"ERROR setting dropdown: {dropdownInfo.error}");
-                    throw new Exception($"Failed to set dropdown: {dropdownInfo.error}");
-                }
-
-                LogMessage($"✓ Dropdown set successfully to '{dropdownInfo.selectedText}' (Value: {dropdownInfo.finalValue})");
-                if ((bool)dropdownInfo.selectionChanged)
-                {
-                    LogMessage($"  Changed from '{dropdownInfo.previousValue}' to '{dropdownInfo.finalValue}'");
-                    await Task.Delay(1000); // Brief wait for any UI updates
-                }
-
-                // Now click the Generate Report button (same as manual)
-                UpdateStatus("Dropdown set. Clicking Generate Report button...", 70);
-                await Task.Delay(1000); // Wait for any postback or JavaScript to complete
-
-                var generateResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
-                    (function() {
-                        try {
-                            var generateButton = document.getElementById('ViewReportImageButton');
-                            if (!generateButton) {
-                                return JSON.stringify({success: false, error: 'Generate Report button not found'});
-                            }
-
-                            // Check if button is enabled
-                            var isDisabled = generateButton.disabled || 
-                                           generateButton.style.display === 'none' ||
-                                           window.getComputedStyle(generateButton).display === 'none';
-
-                            if (isDisabled) {
-                                return JSON.stringify({success: false, error: 'Generate Report button is disabled or hidden'});
-                            }
-
-                            // Click the generate button
-                            generateButton.click();
-
-                            return JSON.stringify({
-                                success: true,
-                                message: 'Generate Report button clicked successfully'
-                            });
-                        } catch (ex) {
-                            return JSON.stringify({success: false, error: ex.message});
-                        }
-                    })()
-                ");
-
-                var generateResponse = JsonConvert.DeserializeObject<dynamic>(
-                    generateResult.Trim('"').Replace("\\\"", "\""));
-
-                if ((bool)generateResponse.success)
-                {
-                    LogMessage("✓ Generate Report button clicked successfully");
-                    UpdateStatus("Report generation started. Waiting for results...", 85);
-
-                    // Wait for the report to generate and load (same as manual)
-                    await Task.Delay(5000);
-
-                    // Verify the report has loaded (same as manual)
-                    await VerifyReportGenerated();
-                }
-                else
-                {
-                    LogMessage($"ERROR clicking Generate Report button: {generateResponse.error}");
-                    throw new Exception($"Failed to click Generate Report button: {generateResponse.error}");
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"ERROR: Report generation failed - {ex.Message}");
-                throw;
-            }
-        }
-
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             try
             {
-                _logWindow?.Close();
+                if (_logWindow != null)
+                {
+                    _logWindow.AllowClose = true;
+                    _logWindow.Close();
+                }
                 webView?.Dispose();
             }
             catch (Exception ex)
@@ -1952,7 +1926,7 @@ namespace CybageMISAutomation
             {
                 _logWindow.Show();
                 _config.ShowLogWindow = true;
-                await ConfigurationService.SaveConfigurationAsync(_config);
+                await SaveConfigSafelyAsync();
                 LogMessage("Log window shown");
             }
         }
@@ -1963,7 +1937,7 @@ namespace CybageMISAutomation
             {
                 _logWindow.Hide();
                 _config.ShowLogWindow = false;
-                await ConfigurationService.SaveConfigurationAsync(_config);
+                await SaveConfigSafelyAsync();
                 LogMessage("Log window hidden");
             }
         }
@@ -1971,24 +1945,64 @@ namespace CybageMISAutomation
         private async void ChkAutoStartFullReport_Checked(object sender, RoutedEventArgs e)
         {
             _config.AutoStartFullReport = true;
-            await ConfigurationService.SaveConfigurationAsync(_config);
+            await SaveConfigSafelyAsync();
             LogMessage("Auto start full report enabled");
         }
 
         private async void ChkAutoStartFullReport_Unchecked(object sender, RoutedEventArgs e)
         {
             _config.AutoStartFullReport = false;
-            await ConfigurationService.SaveConfigurationAsync(_config);
+            await SaveConfigSafelyAsync();
             LogMessage("Auto start full report disabled");
         }
         
-        private async void TxtEmployeeId_TextChanged(object sender, TextChangedEventArgs e)
+        private System.Windows.Threading.DispatcherTimer? _employeeIdSaveTimer;
+        private bool _configSaveErrorShown = false;
+
+        private void TxtEmployeeId_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (_config != null && txtEmployeeId.Text != _config.EmployeeId)
+            // Debounce: save once typing pauses instead of writing the file on every keystroke.
+            if (_employeeIdSaveTimer == null)
             {
-                _config.EmployeeId = txtEmployeeId.Text;
+                _employeeIdSaveTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
+                _employeeIdSaveTimer.Tick += async (_, _) =>
+                {
+                    _employeeIdSaveTimer!.Stop();
+                    var id = (txtEmployeeId.Text ?? string.Empty).Trim();
+                    if (_config != null && id != _config.EmployeeId)
+                    {
+                        _config.EmployeeId = id;
+                        await SaveConfigSafelyAsync();
+                        LogMessage($"Employee ID updated to: {id}");
+                    }
+                };
+            }
+            _employeeIdSaveTimer.Stop();
+            _employeeIdSaveTimer.Start();
+        }
+
+        /// <summary>
+        /// Saves settings without ever throwing into a UI event handler. A failure is logged,
+        /// shown in the status bar, and reported once per session in a dialog.
+        /// </summary>
+        private async Task<bool> SaveConfigSafelyAsync()
+        {
+            try
+            {
                 await ConfigurationService.SaveConfigurationAsync(_config);
-                LogMessage($"Employee ID updated to: {txtEmployeeId.Text}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"❌ Could not save settings to {ConfigurationService.ConfigFilePath}: {ex.Message}");
+                UpdateStatus($"Settings not saved: {ex.Message}", (int)progressBar.Value);
+                if (!_configSaveErrorShown)
+                {
+                    _configSaveErrorShown = true;
+                    MessageBox.Show($"Your settings could not be saved:\n\n{ex.Message}\n\nFile: {ConfigurationService.ConfigFilePath}",
+                        "Settings Not Saved", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                return false;
             }
         }
         
@@ -2015,8 +2029,8 @@ namespace CybageMISAutomation
                     if (dialogResult.Success && !string.IsNullOrWhiteSpace(dialogResult.EmployeeId))
                     {
                         // Update config and UI
-                        _config.EmployeeId = dialogResult.EmployeeId;
-                        await ConfigurationService.SaveConfigurationAsync(_config);
+                        _config.EmployeeId = dialogResult.EmployeeId.Trim();
+                        await SaveConfigSafelyAsync(); // a save failure must not block auto-start
                         
                         // Update UI on main thread
                         Dispatcher.Invoke(() => txtEmployeeId.Text = dialogResult.EmployeeId);
@@ -2039,23 +2053,25 @@ namespace CybageMISAutomation
             }
             catch (Exception ex)
             {
-                LogMessage($"Error during auto-start validation: {ex.Message}");
+                LogMessage($"Error during auto-start: {ex}");
+                UpdateStatus($"Auto-start failed: {ex.Message}", 0);
+                MessageBox.Show($"Auto-start failed: {ex.Message}", "Auto-start Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         
         private async Task StartAutoReport()
         {
             await Task.Delay(1000); // Brief delay after initialization
-            Dispatcher.Invoke(() => BtnFullReport_Click(btnFullReport, new RoutedEventArgs()));
+            BtnFullReport_Click(btnFullReport, new RoutedEventArgs()); // guarded by TryBeginAutomation
         }
 
         #region Monthly Report Functions
 
         private async void BtnMonthlyReport_Click(object sender, RoutedEventArgs e)
         {
+            if (!TryBeginAutomation("Monthly report")) return;
             try
             {
-                SetButtonsEnabled(false);
                 LogMessage("📅 Starting Monthly Report extraction...");
                 UpdateStatus("Extracting monthly data...", 0);
 
@@ -2077,21 +2093,22 @@ namespace CybageMISAutomation
                 }
                 else
                 {
-                    LogMessage("⚠ No monthly data found");
-                    MessageBox.Show("No monthly data found for the specified employee.", "No Data", 
+                    LogMessage("ℹ Monthly report has no rows for this period");
+                    UpdateStatus("Monthly report has no rows for this period", 100);
+                    MessageBox.Show("The monthly attendance report was generated but has no rows for this period.", "No Data", 
                                    MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
             {
                 LogMessage($"❌ Monthly report extraction failed: {ex.Message}");
-                UpdateStatus("Monthly report failed", 0);
+                UpdateStatus($"Monthly report failed: {ex.Message}", 0);
                 MessageBox.Show($"Monthly report extraction failed: {ex.Message}", "Error",
                                MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
-                SetButtonsEnabled(true);
+                EndAutomation();
             }
         }
 
@@ -2103,8 +2120,7 @@ namespace CybageMISAutomation
             {
                 // Step 1: Navigate to main page
                 LogMessage("1️⃣ Navigating to main page...");
-                webView.CoreWebView2.Navigate(_config.MisUrl);
-                await WaitForPageLoad();
+                await NavigateToMisHomeAsync();
 
                 // Step 2: Navigate directly to Attendance Log Report (tree expansion not required)
                 LogMessage("2️⃣ Navigating to Attendance Log Report...");
@@ -2175,7 +2191,7 @@ namespace CybageMISAutomation
                 ");
 
                 var linkInfo = JsonConvert.DeserializeObject<dynamic>(
-                    linkVerificationResult.Trim('"').Replace("\\\"", "\""));
+                    UnwrapScriptJson(linkVerificationResult));
 
                 if (!(bool)linkInfo.found)
                 {
@@ -2187,6 +2203,7 @@ namespace CybageMISAutomation
                 LogMessage($"  ID: {linkInfo.id}, Class: {linkInfo.className}, HasOnClick: {linkInfo.hasOnClick}");
 
                 // Click the Attendance Log Report link (resolved by text match)
+                var navToken = await MarkCurrentPageAsync();
                 var clickResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
                     (function() {
                         try {
@@ -2219,15 +2236,15 @@ namespace CybageMISAutomation
                 ");
 
                 var clickResponse = JsonConvert.DeserializeObject<dynamic>(
-                    clickResult.Trim('"').Replace("\\\"", "\""));
+                    UnwrapScriptJson(clickResult));
 
                 if ((bool)clickResponse.success)
                 {
                     LogMessage("✓ Attendance Log Report link clicked successfully");
                     UpdateStatus("Waiting for Attendance Log Report page to load...", 60);
 
-                    // Wait for the page to navigate/change after the postback (same as swipe log)
-                    await Task.Delay(3000);
+                    // Wait until the postback has replaced the page with the report form
+                    await WaitForFreshPageAsync(navToken, JsAttendanceFormReady, "Attendance Log Report form");
 
                     LogMessage("✓ Navigation to Attendance Log Report completed");
                 }
@@ -2251,7 +2268,7 @@ namespace CybageMISAutomation
                 UpdateStatus("Selecting employee in attendance report...", 50);
                 LogMessage("Starting employee selection process...");
 
-                var targetEmployeeId = (txtEmployeeId.Text ?? string.Empty).Trim();
+                var targetEmployeeId = RequireEmployeeId();
                 LogMessage($"Looking for employee with ID: {targetEmployeeId}");
 
                 // Step 1: Find and verify the employee dropdown exists
@@ -2302,7 +2319,7 @@ namespace CybageMISAutomation
                 ");
 
                 var dropdownInfo = JsonConvert.DeserializeObject<dynamic>(
-                    dropdownResult.Trim('"').Replace("\\\"", "\""));
+                    UnwrapScriptJson(dropdownResult));
 
                 if (!(bool)dropdownInfo.success)
                 {
@@ -2338,7 +2355,7 @@ namespace CybageMISAutomation
                                 return JSON.stringify({{success: false, error: 'Employee dropdown disappeared'}});
                             }}
 
-                            var targetId = '{targetEmployeeId}';
+                            var targetId = {JsonConvert.SerializeObject(targetEmployeeId)};
                             var found = false;
                             var selectedOption = null;
                             var previousIndex = employeeDropdown.selectedIndex;
@@ -2393,7 +2410,7 @@ namespace CybageMISAutomation
                 ");
 
                 var selectionInfo = JsonConvert.DeserializeObject<dynamic>(
-                    selectionResult.Trim('"').Replace("\\\"", "\""));
+                    UnwrapScriptJson(selectionResult));
 
                 if (!(bool)selectionInfo.success)
                 {
@@ -2431,20 +2448,23 @@ namespace CybageMISAutomation
                 ");
 
                 var verificationInfo = JsonConvert.DeserializeObject<dynamic>(
-                    verificationResult.Trim('"').Replace("\\\"", "\""));
+                    UnwrapScriptJson(verificationResult));
 
                 if ((bool)verificationInfo.success)
                 {
                     LogMessage($"✓ Employee selection verified: '{verificationInfo.currentText}' (Index: {verificationInfo.currentIndex})");
                     
-                    // Verify it contains our target ID
-                    if (verificationInfo.currentText.ToString().Contains(targetEmployeeId))
+                    // Verify the selection is exactly our target ID (value, or the ID after the last '-')
+                    string currentValue = ((string)verificationInfo.currentValue ?? "").Trim();
+                    string currentText = (string)verificationInfo.currentText ?? "";
+                    string textId = currentText.Split('-').Last().Trim();
+                    if (currentValue == targetEmployeeId || textId == targetEmployeeId)
                     {
-                        LogMessage($"✓ Verified selection contains target employee ID: {targetEmployeeId}");
+                        LogMessage($"✓ Verified selected employee is {targetEmployeeId}");
                     }
                     else
                     {
-                        LogMessage($"⚠️ WARNING: Selected employee '{verificationInfo.currentText}' does not contain ID '{targetEmployeeId}'");
+                        throw new Exception($"Employee dropdown shows '{currentText}' (value {currentValue}) instead of {targetEmployeeId} after selection");
                     }
                 }
                 else
@@ -2531,7 +2551,7 @@ namespace CybageMISAutomation
                 ");
 
                 var dateInputInfo = JsonConvert.DeserializeObject<dynamic>(
-                    dateInputResult.Trim('"').Replace("\\\"", "\""));
+                    UnwrapScriptJson(dateInputResult));
 
                 if (!(bool)dateInputInfo.success)
                 {
@@ -2626,7 +2646,7 @@ namespace CybageMISAutomation
                 ");
 
                 var setDateInfo = JsonConvert.DeserializeObject<dynamic>(
-                    setDateResult.Trim('"').Replace("\\\"", "\""));
+                    UnwrapScriptJson(setDateResult));
 
                 if (!(bool)setDateInfo.success)
                 {
@@ -2669,7 +2689,7 @@ namespace CybageMISAutomation
                 ");
 
                 var verificationInfo = JsonConvert.DeserializeObject<dynamic>(
-                    verificationResult.Trim('"').Replace("\\\"", "\""));
+                    UnwrapScriptJson(verificationResult));
 
                 if ((bool)verificationInfo.success)
                 {
@@ -2705,206 +2725,43 @@ namespace CybageMISAutomation
 
         private async Task GenerateAttendanceReport()
         {
-            try
+            UpdateStatus("Generating attendance report...", 70);
+            LogMessage("Starting attendance report generation...");
+
+            // Only the report's own View/Generate button: never fall back to an arbitrary submit button.
+            var token = await MarkCurrentPageAsync();
+            var clickResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
+                (function() {
+                    try {
+                        var b = document.getElementById('ViewReportImageButton') ||
+                                document.querySelector('input[id*=""ViewReport""], input[name*=""ViewReport""]');
+                        if (!b) {
+                            var all = document.querySelectorAll('input[type=""submit""], input[type=""image""], input[type=""button""], button');
+                            var available = [];
+                            for (var i = 0; i < Math.min(all.length, 8); i++)
+                                available.push((all[i].id || all[i].name || 'no-id') + ' | ' + (all[i].value || all[i].textContent || '').trim());
+                            return JSON.stringify({success: false, error: 'ViewReport (Generate) button not found', available: available});
+                        }
+                        if (b.disabled) return JSON.stringify({success: false, error: 'Generate button is disabled'});
+                        b.click();
+                        return JSON.stringify({success: true, id: b.id || b.name});
+                    } catch (ex) {
+                        return JSON.stringify({success: false, error: ex.message});
+                    }
+                })()
+            ");
+
+            var clickInfo = JsonConvert.DeserializeObject<dynamic>(UnwrapScriptJson(clickResult));
+            if (!(bool)clickInfo.success)
             {
-                UpdateStatus("Generating attendance report...", 70);
-                LogMessage("Starting report generation process...");
-
-                // Step 1: Find and verify the generate button exists
-                var buttonResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
-                    (function() {
-                        try {
-                            // Try multiple common selectors for generate button
-                            var generateBtn = document.querySelector('input[name*=""ViewReport""], input[title*=""Generate""], input[value*=""Generate""]') ||
-                                            document.querySelector('input[type=""submit""], input[type=""button""][onclick*=""Report""]') ||
-                                            document.querySelector('button[onclick*=""Report""], a[onclick*=""Report""]') ||
-                                            document.querySelector('input[value*=""View""], input[value*=""Show""]');
-                            
-                            if (!generateBtn) {
-                                // Debug - show available buttons and inputs
-                                var allButtons = document.querySelectorAll('input[type=""submit""], input[type=""button""], button');
-                                var available = [];
-                                for (var i = 0; i < Math.min(allButtons.length, 8); i++) {
-                                    available.push({
-                                        type: allButtons[i].type || allButtons[i].tagName,
-                                        value: allButtons[i].value || 'no-value',
-                                        text: allButtons[i].textContent || allButtons[i].innerText || 'no-text',
-                                        name: allButtons[i].name || 'no-name',
-                                        id: allButtons[i].id || 'no-id',
-                                        hasOnClick: !!allButtons[i].getAttribute('onclick')
-                                    });
-                                }
-                                return JSON.stringify({success: false, error: 'Generate button not found', available: available});
-                            }
-
-                            return JSON.stringify({
-                                success: true,
-                                type: generateBtn.type || generateBtn.tagName,
-                                value: generateBtn.value || 'no-value',
-                                text: generateBtn.textContent || generateBtn.innerText || 'no-text',
-                                name: generateBtn.name || 'no-name',
-                                id: generateBtn.id || 'no-id',
-                                hasOnClick: !!generateBtn.getAttribute('onclick'),
-                                disabled: generateBtn.disabled
-                            });
-                        } catch (ex) {
-                            return JSON.stringify({success: false, error: 'Generate button find error'});
-                        }
-                    })()
-                ");
-
-                var buttonInfo = JsonConvert.DeserializeObject<dynamic>(
-                    buttonResult.Trim('"').Replace("\\\"", "\""));
-
-                if (!(bool)buttonInfo.success)
-                {
-                    LogMessage($"ERROR finding generate button: {buttonInfo.error}");
-                    if (buttonInfo.available != null)
-                    {
-                        LogMessage("Available buttons:");
-                        foreach (var button in buttonInfo.available)
-                        {
-                            LogMessage($"  - Type: '{button.type}', Value: '{button.value}', Text: '{button.text}', ID: '{button.id}', HasOnClick: {button.hasOnClick}");
-                        }
-                    }
-                    throw new Exception($"Generate button not found: {buttonInfo.error}");
-                }
-
-                LogMessage($"✓ Generate button found: {buttonInfo.type} - '{buttonInfo.value}' (ID: '{buttonInfo.id}')");
-                    LogMessage($"  Text: '{buttonInfo.text}', Disabled: {buttonInfo.disabled}, HasOnClick: {buttonInfo.hasOnClick}");                // Step 2: Click the generate button
-                var clickResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
-                    (function() {
-                        try {
-                            var generateBtn = document.querySelector('input[name*=""ViewReport""], input[title*=""Generate""], input[value*=""Generate""]') ||
-                                            document.querySelector('input[type=""submit""], input[type=""button""][onclick*=""Report""]') ||
-                                            document.querySelector('button[onclick*=""Report""], a[onclick*=""Report""]') ||
-                                            document.querySelector('input[value*=""View""], input[value*=""Show""]');
-                            
-                            if (!generateBtn) {
-                                return JSON.stringify({success: false, error: 'Generate button disappeared'});
-                            }
-
-                            if (generateBtn.disabled) {
-                                return JSON.stringify({success: false, error: 'Generate button is disabled'});
-                            }
-
-                            // Click the generate button
-                            generateBtn.click();
-
-                            return JSON.stringify({
-                                success: true,
-                                buttonClicked: generateBtn.value || generateBtn.textContent || generateBtn.innerText,
-                                message: 'Generate button clicked successfully'
-                            });
-                        } catch (ex) {
-                            return JSON.stringify({success: false, error: 'Generate button click error'});
-                        }
-                    })()
-                ");
-
-                var clickInfo = JsonConvert.DeserializeObject<dynamic>(
-                    clickResult.Trim('"').Replace("\\\"", "\""));
-
-                if (!(bool)clickInfo.success)
-                {
-                    LogMessage($"ERROR clicking generate button: {clickInfo.error}");
-                    throw new Exception($"Generate button click failed: {clickInfo.error}");
-                }
-
-                LogMessage($"✓ Generate button clicked successfully: '{clickInfo.buttonClicked}'");
-                UpdateStatus("Waiting for report to generate...", 80);
-                
-                // Step 3: Wait for the report to load and verify it appeared
-                await Task.Delay(5000); // Wait for report generation
-
-                var reportVerificationResult = await webView.CoreWebView2.ExecuteScriptAsync(@"
-                    (function() {
-                        try {
-                            // Look for common report indicators
-                            var reportTable = document.querySelector('#ReportViewer1 table, table[id*=""report""], .report table, table.ReportTable') ||
-                                            document.querySelector('table:has(td:contains(""Employee"")), table:has(th:contains(""Employee""))') ||
-                                            document.querySelector('div[id*=""Report""], div[class*=""report""]');
-                            
-                            var reportContent = document.querySelector('#ReportViewer1, div[id*=""Report""], iframe[src*=""Report""]');
-                            
-                            // Check for error messages
-                            var errorMsg = document.querySelector('.error, .Error, div:contains(""No Data""), div:contains(""Error"")');
-                            
-                            // Check page title or headers
-                            var pageTitle = document.title || '';
-                            var headers = document.querySelectorAll('h1, h2, h3');
-                            var headerTexts = [];
-                            for (var i = 0; i < Math.min(headers.length, 3); i++) {
-                                headerTexts.push(headers[i].textContent || headers[i].innerText);
-                            }
-
-                            return JSON.stringify({
-                                success: true,
-                                reportTableFound: !!reportTable,
-                                reportContentFound: !!reportContent,
-                                errorMessageFound: !!errorMsg,
-                                pageTitle: pageTitle,
-                                headerTexts: headerTexts,
-                                tableCount: document.querySelectorAll('table').length,
-                                reportIndicators: {
-                                    reportViewer: !!document.getElementById('ReportViewer1'),
-                                    reportDiv: !!document.querySelector('div[id*=""Report""]'),
-                                    reportClass: !!document.querySelector('.report, .Report')
-                                }
-                            });
-                        } catch (ex) {
-                            return JSON.stringify({success: false, error: 'Report verification error'});
-                        }
-                    })()
-                ");
-
-                var verificationInfo = JsonConvert.DeserializeObject<dynamic>(
-                    reportVerificationResult.Trim('"').Replace("\\\"", "\""));
-
-                if ((bool)verificationInfo.success)
-                {
-                    LogMessage($"✓ Report generation verification completed:");
-                    LogMessage($"  Page title: '{verificationInfo.pageTitle}'");
-                    LogMessage($"  Report table found: {verificationInfo.reportTableFound}");
-                    LogMessage($"  Report content found: {verificationInfo.reportContentFound}");
-                    LogMessage($"  Error message found: {verificationInfo.errorMessageFound}");
-                    LogMessage($"  Total tables on page: {verificationInfo.tableCount}");
-                    
-                    if (verificationInfo.headerTexts != null && ((Newtonsoft.Json.Linq.JArray)verificationInfo.headerTexts).Count > 0)
-                    {
-                        LogMessage("  Page headers:");
-                        foreach (var header in verificationInfo.headerTexts)
-                        {
-                            LogMessage($"    - {header}");
-                        }
-                    }
-
-                    if ((bool)verificationInfo.errorMessageFound)
-                    {
-                        LogMessage("⚠️ WARNING: Error message detected on page - report may not have generated properly");
-                    }
-                    else if ((bool)verificationInfo.reportTableFound || (bool)verificationInfo.reportContentFound)
-                    {
-                        LogMessage("✓ Report appears to have generated successfully");
-                    }
-                    else
-                    {
-                        LogMessage("⚠️ WARNING: No clear report content found - may need to wait longer or check different selectors");
-                    }
-                }
-                else
-                {
-                    LogMessage($"ERROR verifying report generation: {verificationInfo.error}");
-                    // Don't throw here as this is just verification - the report might still have generated
-                }
-
-                LogMessage("✓ Report generation process completed");
+                if (clickInfo.available != null)
+                    foreach (var btn in clickInfo.available) LogMessage($"  available button: {btn}");
+                throw new Exception($"Generate button click failed: {clickInfo.error}");
             }
-            catch (Exception ex)
-            {
-                LogMessage($"ERROR: Report generation failed - {ex.Message}");
-                throw;
-            }
+
+            LogMessage($"✓ Generate button clicked ({clickInfo.id}) - waiting for the report...");
+            UpdateStatus("Waiting for attendance report...", 80);
+            await WaitForFreshPageAsync(token, JsReportViewerPresent, "attendance report");
         }
 
         private async Task<List<MonthlyAttendanceEntry>> ParseMonthlyReportData()
@@ -3063,20 +2920,22 @@ namespace CybageMISAutomation
               }
             })();";
 
-                        string raw = await webView.CoreWebView2.ExecuteScriptAsync(script);
-                        if (string.IsNullOrWhiteSpace(raw) || raw == "null")
-                        {
-                                LogMessage("⚠ Extraction script returned null/empty (single-pass)");
-                                return monthlyData; // empty
-                        }
-                        // ExecuteScriptAsync returns JSON text of the returned JS value directly (we returned an object not a string)
+                        // The report renders asynchronously; poll until the table is readable.
                         dynamic? parsed = null;
-                        try { parsed = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(raw); }
-                        catch (Exception ex)
+                        string lastError = "no result";
+                        var pollTimer = System.Diagnostics.Stopwatch.StartNew();
+                        while (true)
                         {
-                            LogMessage($"⚠ JSON parse failure (single-pass direct object): {ex.Message}");
-                            LogMessage($"RAW: {raw.Substring(0, Math.Min(raw.Length, 400))}");
-                            return monthlyData;
+                            string raw = await webView.CoreWebView2.ExecuteScriptAsync(script);
+                            // The script returns an object (not a JSON string), so raw is the object's JSON.
+                            parsed = string.IsNullOrWhiteSpace(raw) || raw == "null"
+                                ? null
+                                : Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(raw);
+                            if (parsed?.success == true) break;
+                            lastError = parsed?.error != null ? parsed.error.ToString() : "script returned no result";
+                            if (pollTimer.ElapsedMilliseconds > 45000)
+                                throw new Exception($"Monthly report could not be read after 45s: {lastError}");
+                            await Task.Delay(1000);
                         }
 
                         if (parsed?.debug != null)
@@ -3122,15 +2981,17 @@ namespace CybageMISAutomation
                             }
                             LogMessage($"✅ Extracted {monthlyData.Count} monthly rows (single-pass, extended columns)");
                         }
-                        else
-                        {
-                                var err = parsed?.error != null ? parsed.error.ToString() : "Unknown failure";
-                                LogMessage($"⚠ Monthly extraction failed (single-pass) - {err}");
-                        }
+
+                        // Every row must belong to the requested employee; anything else means the
+                        // dropdown selection did not take effect.
+                        var wantedId = RequireEmployeeId();
+                        var otherIds = monthlyData.Select(m => m.EmployeeId.Trim()).Where(id => id != wantedId).Distinct().ToList();
+                        if (otherIds.Count > 0)
+                            throw new Exception($"Monthly report contains employee(s) {string.Join(", ", otherIds)} but {wantedId} was requested.");
 
                         if (monthlyData.Count == 0)
                         {
-                                LogMessage("⚠ No monthly data extracted (single-pass heuristic)");
+                                LogMessage("ℹ Monthly report table was read but contains no rows for this period");
                         }
 
                         return monthlyData;
@@ -3169,56 +3030,81 @@ namespace CybageMISAutomation
 
         private async void BtnFullReport_Click(object sender, RoutedEventArgs e)
         {
-            var wasStartFullAutomationEnabled = btnStartFullAutomation.IsEnabled;
-
+            if (!TryBeginAutomation("Full report")) return;
             try
             {
-                SetButtonsEnabled(false);
-                btnStartFullAutomation.IsEnabled = false;
-                btnFullReport.IsEnabled = false;
-                LogMessage("Full Report button triggered: running complete automation chain...");
-                await RunFullCalendarAutomation();
-                ShowFullCalendarWindow();
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Full Report failed: {ex.Message}");
-            }
-            finally
-            {
-                SetButtonsEnabled(true);
-                btnStartFullAutomation.IsEnabled = wasStartFullAutomationEnabled;
-                btnFullReport.IsEnabled = true;
-            }
-        }
+                LogMessage("Full Report: running Monthly -> Today -> Yesterday...");
+                var failures = await RunFullCalendarAutomation();
 
-        private async Task RunFullCalendarAutomation(bool showWindowOnCompletion = false)
-        {
-            // Sequence: Monthly -> Today -> Yesterday -> Calendar
-            try
-            {
-                LogMessage("[CALENDAR AUTO] Starting monthly extraction...");
-                var monthly = await ExtractMonthlyAttendanceData();
-                UpdateMonthlyReportCache(monthly);
-                LogMessage($"[CALENDAR AUTO] Monthly cached: {monthly.Count} records");
+                bool anyData = _monthlyReportCache.Count > 0 || _todayWorkHoursCalculations.Count > 0 || _yesterdayWorkHoursCalculations.Count > 0;
+                if (failures.Count > 0)
+                {
+                    var msg = "Some parts of the full report failed:\n\n- " + string.Join("\n- ", failures) +
+                              (anyData ? "\n\nThe calendar shows only the parts that succeeded." : "");
+                    UpdateStatus($"Full report finished with {failures.Count} error(s)", 0);
+                    MessageBox.Show(msg, "Full Report - Errors", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                else
+                {
+                    UpdateStatus("Full report completed", 100);
+                }
 
-                LogMessage("[CALENDAR AUTO] Extracting Today swipe log (lightweight) ...");
-                var todayCalc = await QuickDailyHoursExtraction(isToday:true);
-                UpdateTodayCalculations(todayCalc);
-                LogMessage($"[CALENDAR AUTO] Today calc entries: {todayCalc.Count}");
-
-                LogMessage("[CALENDAR AUTO] Extracting Yesterday swipe log (lightweight) ...");
-                var yestCalc = await QuickDailyHoursExtraction(isToday:false);
-                UpdateYesterdayCalculations(yestCalc);
-                LogMessage($"[CALENDAR AUTO] Yesterday calc entries: {yestCalc.Count}");
-
-                if (showWindowOnCompletion)
+                if (anyData)
                     ShowFullCalendarWindow();
             }
             catch (Exception ex)
             {
-                LogMessage($"[CALENDAR AUTO] Failed: {ex.Message}");
+                LogMessage($"Full Report failed: {ex}");
+                UpdateStatus($"Full report failed: {ex.Message}", 0);
+                MessageBox.Show($"Full report failed: {ex.Message}", "Full Report Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+            finally
+            {
+                EndAutomation();
+            }
+        }
+
+        /// <summary>
+        /// Runs Monthly, Today and Yesterday independently so one failure doesn't hide the others.
+        /// Caches are cleared first so a failed phase can never show data from a previous run.
+        /// Returns the list of failures (empty when everything succeeded).
+        /// </summary>
+        private async Task<List<string>> RunFullCalendarAutomation()
+        {
+            var failures = new List<string>();
+            _monthlyReportCache = new List<MonthlyAttendanceEntry>();
+            _todayWorkHoursCalculations = new List<WorkHoursCalculation>();
+            _yesterdayWorkHoursCalculations = new List<WorkHoursCalculation>();
+
+            try
+            {
+                LogMessage("[CALENDAR] Monthly attendance...");
+                var monthly = await ExtractMonthlyAttendanceData();
+                UpdateMonthlyReportCache(monthly);
+                LogMessage($"[CALENDAR] Monthly rows: {monthly.Count}");
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"[CALENDAR] Monthly failed: {ex.Message}");
+                failures.Add($"Monthly: {ex.Message}");
+            }
+
+            foreach (var isToday in new[] { true, false })
+            {
+                var label = isToday ? "Today" : "Yesterday";
+                try
+                {
+                    var calc = await DailyHoursCalculationAsync(isToday);
+                    if (isToday) UpdateTodayCalculations(calc); else UpdateYesterdayCalculations(calc);
+                }
+                catch (Exception ex)
+                {
+                    LogMessage($"[CALENDAR] {label} failed: {ex.Message}");
+                    failures.Add(ex.Message);
+                }
+            }
+
+            return failures;
         }
 
         private void ShowFullCalendarWindow()
@@ -3231,343 +3117,36 @@ namespace CybageMISAutomation
             win.Show();
         }
 
-        private async Task<List<WorkHoursCalculation>> QuickDailyHoursExtraction(bool isToday)
+        /// <summary>
+        /// Runs the swipe log for one day and converts it to a calendar entry.
+        /// Returns an empty list when the day has no swipes (monthly data then stands); throws on failure.
+        /// </summary>
+        private async Task<List<WorkHoursCalculation>> DailyHoursCalculationAsync(bool isToday)
         {
-            var dayType = isToday ? "Today" : "Yesterday";
-            LogMessage($"[DAILY] Starting {dayType} extraction...");
-            var list = new List<WorkHoursCalculation>();
-            try
+            var label = isToday ? "Today" : "Yesterday";
+            var day = isToday ? DateTime.Today : DateTime.Today.AddDays(-1);
+            var entries = await RunDailyReportAsync(isToday);
+            if (entries.Count == 0)
+                return new List<WorkHoursCalculation>();
+
+            var result = WorkHoursCalculator.Calculate(entries, DateTime.Now);
+            foreach (var e in result.Labeled)
+                LogMessage($"[LABEL] {e.Date} {e.Time} | {e.Direction} | {e.MachineName} -> {e.Activity} ({e.Duration})");
+            if (result.SkippedRows.Count > 0)
+                LogMessage($"⚠ {label}: skipped {result.SkippedRows.Count} unreadable row(s): {string.Join("; ", result.SkippedRows)}");
+            LogMessage($"[DAILY] {label} work time: {result.WorkTimeDisplay}" +
+                       (result.OngoingTime > TimeSpan.Zero ? $" (incl. {WorkHoursCalculator.Format(result.OngoingTime)} ongoing)" : ""));
+
+            return new List<WorkHoursCalculation>
             {
-                LogMessage($"[DAILY] Navigating to MIS for {dayType}...");
-                webView.CoreWebView2.Navigate(_config.MisUrl);
-                await WaitForPageLoad();
-                
-                LogMessage($"[DAILY] Clicking swipe log for {dayType}...");
-                await ExecuteClickSwipeLog();
-                
-                LogMessage($"[DAILY] Setting report type for {dayType} (index: {(isToday ? 0 : 1)})...");
-                cmbReportType.SelectedIndex = isToday ? 0 : 1;
-                
-                LogMessage($"[DAILY] Generating report for {dayType}...");
-                await ExecuteGenerateReport();
-                
-                LogMessage($"[DAILY] Extracting data for {dayType}...");
-                var entries = await ExecuteDataExtraction();
-                LogMessage($"[DAILY] Raw entries extracted for {dayType}: {entries.Count}");
-                
-                if (entries.Any())
+                new WorkHoursCalculation
                 {
-                    // Use the same working logic as ComparisonWindow
-                    var labeledEntries = LabelSwipeEntries(entries);
-                    var workHours = CalculateWorkHoursFromLabels(labeledEntries);
-                    
-                    LogMessage($"[DAILY] Labeled entries for {dayType}: {labeledEntries.Count}");
-                    LogMessage($"[DAILY] Calculated work hours for {dayType}: {workHours}");
-                    
-                    var grouped = entries.GroupBy(e => e.Date);
-                    foreach (var g in grouped)
-                    {
-                        var targetDate = DateTime.TryParse(g.Key, out var dt) ? dt : (isToday ? DateTime.Today : DateTime.Today.AddDays(-1));
-                        
-                        list.Add(new WorkHoursCalculation
-                        {
-                            Date = targetDate,
-                            WorkingHoursDisplay = workHours,
-                            TotalWorkingHoursDisplay = workHours,
-                            Status = workHours != "0:00" && workHours != "Error" ? "Present" : "No Data"
-                        });
-                        
-                        LogMessage($"[DAILY] Added calculation for {dayType}: Date={targetDate:yyyy-MM-dd}, Hours={workHours}");
-                    }
+                    Date = day,
+                    WorkingHoursDisplay = result.WorkTimeDisplay,
+                    TotalWorkingHoursDisplay = result.WorkTimeDisplay,
+                    Status = result.WorkTime > TimeSpan.Zero ? "Present" : "No Work Time"
                 }
-                else
-                {
-                    LogMessage($"[DAILY] No entries found for {dayType}");
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"[DAILY] {dayType} extraction failed: {ex.Message}");
-                LogMessage($"[DAILY] Stack trace: {ex.StackTrace}");
-            }
-            
-            LogMessage($"[DAILY] {dayType} extraction completed with {list.Count} calculation entries");
-            return list;
-        }
-
-        private static TimeSpan CalcHoursSpan(IEnumerable<string> times)
-        {
-            var parsed = new List<TimeSpan>();
-            foreach (var t in times)
-            {
-                // Handle both "HH:mm:ss" and "HH:mm:ss AM/PM" formats
-                if (TimeSpan.TryParse(t, out var ts))
-                {
-                    parsed.Add(ts);
-                }
-                else if (DateTime.TryParse(t, out var dt))
-                {
-                    // If it's in AM/PM format, parse as DateTime and extract TimeOfDay
-                    parsed.Add(dt.TimeOfDay);
-                }
-            }
-            
-            if (parsed.Count < 2) return TimeSpan.Zero;
-            var start = parsed.Min(); 
-            var end = parsed.Max();
-            
-            // Handle case where work spans midnight (end < start)
-            if (end < start)
-            {
-                end = end.Add(TimeSpan.FromDays(1));
-            }
-            
-            return end - start;
-        }
-
-        private static string FormatSpan(TimeSpan span)
-        {
-            if (span <= TimeSpan.Zero) return string.Empty;
-            return $"{(int)span.TotalHours:00}:{span.Minutes:00}";
-        }
-
-        // Copy of working logic from ComparisonWindow for chunk-based calculation
-        private string IdentifyGateType(string machineName)
-        {
-            if (string.IsNullOrEmpty(machineName))
-                return "Unknown";
-
-            // Based on CT2 building structure and VBA gate classification
-            // Main gates - building/campus entry points (like Basement, Parking)
-            var mainGatePatterns = new[] { "Basement", "Parking", "Tripod", "Ground", "Reception", "Main Gate", "Security", "Entry Gate" };
-            
-            // Work gates - actual office/work floors (4th Floor, 5th Floor, etc.)
-            var workGatePatterns = new[] { "4th Floor", "5th Floor", "6th Floor", "7th Floor", "8th Floor", "9th Floor", "Floor Le", "Floor Ri", "Building.*Floor", "Office Floor" };
-            
-            // Play gates - recreation areas (cafeteria, lobby, etc.)
-            var playGatePatterns = new[] { "Cafeteria", "Recreation", "Lobby", "Canteen", "Food Court", "Gaming", "Break" };
-
-            // Check in order of specificity
-            foreach (var pattern in workGatePatterns)
-            {
-                if (machineName.Contains(pattern, StringComparison.OrdinalIgnoreCase))
-                    return "WorkGate";
-            }
-
-            foreach (var pattern in playGatePatterns)
-            {
-                if (machineName.Contains(pattern, StringComparison.OrdinalIgnoreCase))
-                    return "PlayGate";
-            }
-
-            foreach (var pattern in mainGatePatterns)
-            {
-                if (machineName.Contains(pattern, StringComparison.OrdinalIgnoreCase))
-                    return "MainGate";
-            }
-
-            return "Unknown";
-        }
-
-        private DateTime ParseTime(string timeStr)
-        {
-            if (string.IsNullOrEmpty(timeStr))
-                return DateTime.MinValue;
-
-            // Try to parse various time formats
-            var formats = new[]
-            {
-                "hh:mm:ss tt",  // 12-hour format with AM/PM
-                "h:mm:ss tt",   // 12-hour format with AM/PM (single digit hour)
-                "HH:mm:ss",
-                "H:mm:ss", 
-                "HH:mm",
-                "H:mm",
-                "dd/MM/yyyy HH:mm:ss",
-                "dd-MM-yyyy HH:mm:ss",
-                "MM/dd/yyyy HH:mm:ss",
-                "yyyy-MM-dd HH:mm:ss"
             };
-
-            foreach (var format in formats)
-            {
-                if (DateTime.TryParseExact(timeStr, format, null, System.Globalization.DateTimeStyles.None, out DateTime result))
-                {
-                    // If only time was parsed, assume today's date
-                    if (result.Date == DateTime.MinValue.Date)
-                    {
-                        result = DateTime.Today.Add(result.TimeOfDay);
-                    }
-                    return result;
-                }
-            }
-
-            // Fallback to general parsing
-            if (DateTime.TryParse(timeStr, out DateTime generalResult))
-            {
-                return generalResult;
-            }
-
-            return DateTime.MinValue;
-        }
-
-        private List<SwipeLogEntry> LabelSwipeEntries(List<SwipeLogEntry> entries)
-        {
-            if (entries == null || entries.Count == 0)
-                return entries ?? new List<SwipeLogEntry>();
-
-            var labeledEntries = new List<SwipeLogEntry>();
-            
-            // Sort entries by time 
-            var sortedEntries = entries.OrderBy(e => ParseTime(e.Time)).ToList();
-            
-            LogMessage($"[LABEL] Labeling {entries.Count} swipe entries and calculating durations");
-            
-            for (int i = 0; i < sortedEntries.Count; i++)
-            {
-                var entry = sortedEntries[i];
-                var gateType = IdentifyGateType(entry.MachineName);
-                var direction = entry.Direction;
-                var activity = "";
-                var duration = "";
-                
-                // Apply VBA labeling logic - based on your clarification:
-                // WORK = inside work area (office floors)
-                // PLAY = outside work area (basement, parking, reception, etc.)
-                if (gateType == "MainGate" && (entry.MachineName.Contains("Basement") || entry.MachineName.Contains("Parking")))
-                {
-                    // Real exit gates - basement/parking areas are PLAY (outside work area)
-                    activity = "PLAY"; // Outside work area
-                }
-                else if (gateType == "WorkGate" || entry.MachineName.Contains("Floor"))
-                {
-                    // Floor gates - WORK area (inside work area)
-                    activity = "WORK";
-                }
-                else if (gateType == "PlayGate")
-                {
-                    // Recreation areas - PLAY (outside work area)
-                    activity = "PLAY";
-                }
-                else if (gateType == "MainGate")
-                {
-                    // Other main gates (reception, lobby) - PLAY (outside work area)
-                    activity = "PLAY";
-                }
-                else
-                {
-                    // Unknown areas - default to PLAY (outside work area)
-                    activity = "PLAY";
-                }
-                
-                // Calculate duration from this swipe to next swipe
-                if (i < sortedEntries.Count - 1)
-                {
-                    var currentTime = ParseTime(entry.Time);
-                    var nextTime = ParseTime(sortedEntries[i + 1].Time);
-                    
-                    if (nextTime > currentTime)
-                    {
-                        var timeDiff = nextTime - currentTime;
-                        var totalMinutes = (int)timeDiff.TotalMinutes;
-                        var hours = totalMinutes / 60;
-                        var minutes = totalMinutes % 60;
-                        duration = $"{hours}:{minutes:D2}";
-                    }
-                    else
-                    {
-                        duration = "0:00";
-                    }
-                }
-                else
-                {
-                    duration = "-"; // Last entry has no next swipe
-                }
-                
-                // Create labeled entry with duration
-                var labeledEntry = new SwipeLogEntry
-                {
-                    EmployeeId = entry.EmployeeId,
-                    Date = entry.Date,
-                    MachineName = entry.MachineName,
-                    Direction = entry.Direction,
-                    Time = entry.Time,
-                    Activity = activity,
-                    Duration = duration
-                };
-                
-                LogMessage($"[LABEL] {entry.Time} | {direction} | {entry.MachineName} | {gateType} → Activity: {activity} | Duration: {duration}");
-                labeledEntries.Add(labeledEntry);
-            }
-            
-            return labeledEntries;
-        }
-
-        private string CalculateWorkHoursFromLabels(List<SwipeLogEntry> labeledEntries)
-        {
-            if (labeledEntries == null || labeledEntries.Count == 0)
-                return "0:00";
-
-            try
-            {
-                var totalWorkMinutes = 0.0;
-                
-                LogMessage($"[CALC] Calculating work time from {labeledEntries.Count} labeled entries");
-                
-                // Calculate time chunks between consecutive swipes
-                for (int i = 0; i < labeledEntries.Count - 1; i++)
-                {
-                    var currentEntry = labeledEntries[i];
-                    var nextEntry = labeledEntries[i + 1];
-                    
-                    // The time chunk between current and next swipe has the activity of current EXIT
-                    if (currentEntry.Activity == "WORK")
-                    {
-                        var startTime = ParseTime(currentEntry.Time);
-                        var endTime = ParseTime(nextEntry.Time);
-                        
-                        if (endTime > startTime)
-                        {
-                            var chunkMinutes = (endTime - startTime).TotalMinutes;
-                            totalWorkMinutes += chunkMinutes;
-                            
-                            LogMessage($"[CALC] WORK chunk: {startTime:HH:mm:ss} to {endTime:HH:mm:ss} = {chunkMinutes:F0} minutes");
-                        }
-                    }
-                }
-                
-                // Handle ongoing work for today (if last entry indicates work)
-                if (labeledEntries.Count > 0)
-                {
-                    var lastEntry = labeledEntries.Last();
-                    if (lastEntry.Activity == "WORK")
-                    {
-                        var lastTime = ParseTime(lastEntry.Time);
-                        var now = DateTime.Now;
-                        
-                        // Only add ongoing time if it's the same day
-                        if (now.Date == lastTime.Date && now > lastTime)
-                        {
-                            var ongoingMinutes = (now - lastTime).TotalMinutes;
-                            totalWorkMinutes += ongoingMinutes;
-                            
-                            LogMessage($"[CALC] ONGOING work: {lastTime:HH:mm:ss} to {now:HH:mm:ss} = {ongoingMinutes:F0} minutes");
-                        }
-                    }
-                }
-                
-                var hours = (int)(totalWorkMinutes / 60);
-                var minutes = (int)(totalWorkMinutes % 60);
-                
-                LogMessage($"[CALC] TOTAL WORK TIME: {totalWorkMinutes:F0} minutes = {hours}:{minutes:D2}");
-                
-                return $"{hours}:{minutes:D2}";
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"[CALC] Error calculating work hours: {ex.Message}");
-                return "Error";
-            }
         }
 
         #endregion

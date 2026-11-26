@@ -82,19 +82,8 @@ namespace CybageMISAutomation
 
         private TimeSpan ParseWorkHours(string hoursStr)
         {
-            if (string.IsNullOrEmpty(hoursStr)) return TimeSpan.Zero;
-
-            try
-            {
-                var parts = hoursStr.Split(':');
-                if (parts.Length == 2 && int.TryParse(parts[0], out int hours) && int.TryParse(parts[1], out int minutes))
-                {
-                    return new TimeSpan(hours, minutes, 0);
-                }
-            }
-            catch { }
-
-            return TimeSpan.Zero;
+            // Monthly MIS values are decimal hours ("8.49"); daily ones are "H:mm". Same parser as the calendar.
+            return TimeSpan.FromHours(Services.FullReportBuilder.ParseHoursToDecimal(hoursStr));
         }
 
         private string FormatMinutes(int totalMinutes)

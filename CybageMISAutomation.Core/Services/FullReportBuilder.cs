@@ -12,30 +12,29 @@ namespace CybageMISAutomation.Services
             int? targetMonth = null)
         {
             var monthList = monthly?.ToList() ?? new List<MonthlyAttendanceEntry>();
-            if (!monthList.Any()) return new FullReportViewModel();
 
-            DateTime firstDate = monthList
-                .Select(m => ParseDate(m.Date))
-                .Where(d => d != DateTime.MinValue)
-                .OrderBy(d => d)
-                .FirstOrDefault();
-            int year = targetYear ?? firstDate.Year;
-            int month = targetMonth ?? firstDate.Month;
+            // The calendar is for the current month unless told otherwise; it is built even when
+            // the monthly report is missing so Today/Yesterday results are never thrown away.
+            int year = targetYear ?? DateTime.Today.Year;
+            int month = targetMonth ?? DateTime.Today.Month;
 
             var dict = new Dictionary<DateTime, DayCalendarItem>();
 
             foreach (var m in monthList)
             {
                 var d = ParseDate(m.Date);
-                if (d.Year != year || d.Month != month) continue;
+                if (d == DateTime.MinValue || d.Year != year || d.Month != month) continue;
                 var hours = m.ActualWorkHours;
                 var hoursDec = ParseHoursToDecimal(hours);
                 var status = !string.IsNullOrWhiteSpace(m.Status) ? m.Status.Trim() : string.Empty;
                 if (string.IsNullOrEmpty(status) && hoursDec <= 0) status = "No Data";
-                dict[d] = new DayCalendarItem
+
+                // Last row for a date wins (deterministic).
+                dict[d.Date] = new DayCalendarItem
                 {
-                    Date = d,
-                    Hours = hours,
+                    Date = d.Date,
+                    // Show every day as H:mm (monthly MIS gives decimal hours); the raw value stays in the tooltip.
+                    Hours = hoursDec > 0 ? WorkHoursCalculator.Format(TimeSpan.FromHours(hoursDec)) : hours,
                     HoursDecimal = hoursDec,
                     Status = status,
                     FromMonthly = true,
@@ -50,38 +49,37 @@ namespace CybageMISAutomation.Services
                 foreach (var c in src)
                 {
                     var d = c.Date.Date;
-                    var hours = c.WorkingHoursDisplay ?? c.TotalWorkingHoursDisplay ?? string.Empty;
+                    if (d.Year != year || d.Month != month) continue;
+                    var hours = !string.IsNullOrWhiteSpace(c.WorkingHoursDisplay) ? c.WorkingHoursDisplay : c.TotalWorkingHoursDisplay ?? string.Empty;
                     var hoursDec = ParseHoursToDecimal(hours);
+                    if (hoursDec <= 0) continue; // no swipe-based work time: keep whatever monthly says
+
                     if (dict.TryGetValue(d, out var existing))
                     {
-                        if ((d.Date == DateTime.Today || d.Date == DateTime.Today.AddDays(-1)) && hoursDec > 0)
+                        // Today is always in progress in the monthly report, so the live swipe value wins.
+                        // For other days the monthly figure (which also includes WFH) is authoritative
+                        // and is only filled in from the swipe log when it has no hours yet.
+                        if (d == DateTime.Today || existing.HoursDecimal <= 0)
                         {
                             existing.Hours = hours;
                             existing.HoursDecimal = hoursDec;
                             existing.Status = "Present";
                             existing.FromDailyFallback = true;
-                            existing.Tooltip = existing.Tooltip + "\n(Updated with Daily Hours: " + hours + ")";
+                            existing.Tooltip += $"\n(Swipe-log hours: {hours})";
                         }
-                        else if (existing.HoursDecimal <= 0 && hoursDec > 0)
-                        {
-                            existing.Hours = hours;
-                            existing.HoursDecimal = hoursDec;
-                            existing.Status = hoursDec > 0 ? "Present" : existing.Status;
-                            existing.FromDailyFallback = true;
-                            existing.Tooltip = existing.Tooltip + "\n(Overlaid Daily Hours: " + hours + ")";
-                        }
-                        continue;
                     }
-                    var status = hoursDec > 0 ? "Present" : (IsWeekend(d) ? "Weekly Off" : "No Data");
-                    dict[d] = new DayCalendarItem
+                    else
                     {
-                        Date = d,
-                        Hours = hours,
-                        HoursDecimal = hoursDec,
-                        Status = status,
-                        FromDailyFallback = true,
-                        Tooltip = $"Source: Daily\nHours: {hours}\nStatus: {status}"
-                    };
+                        dict[d] = new DayCalendarItem
+                        {
+                            Date = d,
+                            Hours = hours,
+                            HoursDecimal = hoursDec,
+                            Status = "Present",
+                            FromDailyFallback = true,
+                            Tooltip = $"Source: Swipe log\nHours: {hours}"
+                        };
+                    }
                 }
             }
 
@@ -158,18 +156,34 @@ namespace CybageMISAutomation.Services
             string[] formats = { "dd-MMM-yyyy", "d-MMM-yyyy", "dd-MMM-yy", "d-MMM-yy", "dd-MM-yyyy", "d-MM-yyyy" };
             if (DateTime.TryParseExact(raw.Trim(), formats, System.Globalization.CultureInfo.InvariantCulture,
                 System.Globalization.DateTimeStyles.None, out var dt)) return dt;
-            DateTime.TryParse(raw, out dt);
-            return dt;
+            // Same formats the swipe log uses ("25 Sep 2025" etc.); never guess with the machine's culture.
+            return WorkHoursCalculator.ParseDate(raw) ?? DateTime.MinValue;
         }
 
-        private static double ParseHoursToDecimal(string h)
+        /// <summary>Parses "H:mm", "H:mm:ss" or decimal hours ("8.49") to decimal hours; 0 when unreadable.</summary>
+        public static double ParseHoursToDecimal(string? h)
         {
             if (string.IsNullOrWhiteSpace(h)) return 0;
-            var parts = h.Split(':');
-            if (parts.Length != 2) return 0;
-            if (int.TryParse(parts[0], out int hh) && int.TryParse(parts[1], out int mm))
+            h = h.Trim();
+
+            // "H:mm" or "H:mm:ss" (daily swipe-log calculations)
+            if (h.Contains(':'))
             {
-                return hh + (mm / 60.0);
+                var parts = h.Split(':');
+                if ((parts.Length == 2 || parts.Length == 3) &&
+                    int.TryParse(parts[0], out int hh) && int.TryParse(parts[1], out int mm))
+                {
+                    int ss = parts.Length == 3 && int.TryParse(parts[2], out int s) ? s : 0;
+                    return hh + (mm / 60.0) + (ss / 3600.0);
+                }
+                return 0;
+            }
+
+            // Decimal hours, e.g. "8.49" (monthly MIS report; values like "7.68" confirm it's not h.mm)
+            if (double.TryParse(h, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out double dec) && dec > 0)
+            {
+                return dec;
             }
             return 0;
         }

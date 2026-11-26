@@ -8,10 +8,20 @@ namespace CybageMISAutomation
     {
         private ObservableCollection<LogEntry> _logEntries = new();
 
+        /// <summary>Set by the main window on shutdown; otherwise closing just hides the window.</summary>
+        public bool AllowClose { get; set; }
+
         public LogWindow()
         {
             InitializeComponent();
             dataGridLogs.ItemsSource = _logEntries;
+            Closing += (_, e) =>
+            {
+                if (AllowClose) return;
+                // A closed WPF window can't be shown again; hide it so "Show Logs" keeps working.
+                e.Cancel = true;
+                Hide();
+            };
         }
 
         public void AddLogEntry(string message)
